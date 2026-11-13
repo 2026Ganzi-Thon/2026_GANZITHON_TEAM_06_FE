@@ -1,3 +1,5 @@
+# 개발 내용에 대한 푸시는 develop 브랜치에 합니다.
+
 # 잠시 정차합니다
 
 2026 간지톤 프론트엔드입니다. React로 화면을 만들고, 대기실의 2D 공간만 Phaser로 그립니다.
@@ -43,5 +45,3 @@ public/assets/      캐릭터, 배경, 아이템 이미지
 ```
 
 React와 Phaser는 `src/game/EventBus.js`로 이벤트를 주고받습니다. 대기실 페이지는 `useRef`를 `PhaserGame`에 넘깁니다.
-
-기획 문서가 들어 있는 `docs/`는 Git에 포함되지 않습니다.
