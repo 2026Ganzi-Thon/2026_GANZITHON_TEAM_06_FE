@@ -3,6 +3,10 @@
     --color-text-muted: rgba(255, 255, 255, 0.3);
     --color-bg: #000000;
     --color-accent: #0ec3c9;
+    --color-brown-title: #422d27;
+    --color-brown-text: #78645b;
+    --color-brown-stroke: #6d4344;
+    --color-cream: #fef3e6;
     --space-sm: 10px;
     --space-md: 16px;
 }

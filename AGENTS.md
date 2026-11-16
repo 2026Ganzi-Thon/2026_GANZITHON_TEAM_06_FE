@@ -34,6 +34,7 @@ npm run build            # 빌드가 깨지지 않는지 확인
 | `/waiting-room` | 대기실 (Phaser는 여기에만 붙는다) |
 | `/collection` | 털실 |
 | `/my-sheep` | 마이 양 |
+| `/my-sheep/piece/:pieceId` | 조각 상세 |
 
 ## 폴더 구조
 ```text
@@ -42,12 +43,15 @@ src/
 ├─ PhaserGame.jsx       # React ↔ Phaser 연결 컴포넌트
 ├─ pages/               # 라우트 단위 페이지
 ├─ components/          # React UI (common/, onboarding/, waitingRoom/, yarn/)
+├─ data/                # 화면에서 쓰는 정적 데이터 (API 도입 전까지의 목록 등)
 └─ game/                # Phaser 영역
    ├─ main.js           # 게임 설정
    ├─ EventBus.js       # React ↔ Phaser 이벤트
    ├─ scenes/           # Boot, Preloader, MainMenu, Game, GameOver
    └─ objects/          # 게임 오브젝트
 public/                 # 정적 파일, assets/ (캐릭터·배경·아이템 이미지)
+├─ style.css            # 공통 스타일 (CSS 변수, 버튼 등)
+└─ my-sheep.css         # 마이 양 화면 전용 스타일 (화면별 CSS 파일은 이처럼 둔다)
 vite/                   # Vite 설정 (dev / prod)
 ```
 - 새 파일은 위 구조의 역할에 맞는 위치에 만든다.
@@ -107,7 +111,10 @@ export default function WaitingRoomPage()
 ```
 
 ### 스타일
-- 스타일은 `public/style.css`에 모은다. 정적 값을 인라인 `style={{}}`로 쓰지 않는다.
+- 공통 스타일(CSS 변수, 공용 버튼 등)은 `public/style.css`에 둔다.
+- 한 화면에서만 쓰는 스타일은 `public/{화면}.css`로 분리하고(예: `my-sheep.css`), `index.html`에서 `style.css` **다음에** `<link>`로 불러온다. `style.css`의 `:root` 변수를 쓰고, 클래스에는 화면 접두사를 붙여(`my-sheep-…`) 다른 화면과 충돌하지 않게 한다.
+- 새 화면 CSS 파일을 만들면 `index.html`의 `<link>`도 함께 추가한다. 화면 하나의 스타일이 `style.css`에 길게 쌓이지 않게 한다.
+- 정적 값을 인라인 `style={{}}`로 쓰지 않는다.
 - 런타임에 정해지는 값(좌표, 동적 색상)만 인라인으로 쓴다.
 - 색상·간격은 같은 값을 반복해서 쓰지 말고 CSS 변수로 둔다. 매직 넘버를 흩뿌리지 않는다.
 
