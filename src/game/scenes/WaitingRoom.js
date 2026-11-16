@@ -7,7 +7,12 @@ const ROOM_WIDTH = 1024;
 const ROOM_HEIGHT = 768;
 const WALL_ROWS = 2;
 
+const ENTRANCE_WAIT_MS = 1200;
+const WALK_LEG_MS = 300;
 const ENTRANCE = { x: 220, y: 160 };
+// 걷기 그림이 남동·남서뿐이라 곧장 위로는 가지 않고 대각선 두 번으로 간다.
+const WALK_SOUTHEAST_END = { x: 520, y: 360 };
+const SEAT = { x: 300, y: 500 };
 
 const SEATED_PASSENGERS = [
     { x: 180, y: 280, direction: 'south' },
@@ -26,11 +31,80 @@ export class WaitingRoom extends Scene
     {
         this.createRoom();
         this.createSeatedPassengers();
+        this.addBench(SEAT.x, SEAT.y);
+        this.createWalkAnimations();
 
         this.player = this.add.sprite(ENTRANCE.x, ENTRANCE.y, 'walk-south-east-0');
         this.player.setDepth(ENTRANCE.y);
 
+        this.time.delayedCall(ENTRANCE_WAIT_MS, () =>
+        {
+            if (!this.player?.active)
+            {
+                return;
+            }
+
+            this.walkToSeat();
+        });
+
         EventBus.emit('current-scene-ready', this);
+    }
+
+    createWalkAnimations ()
+    {
+        ['south-east', 'south-west'].forEach((direction) =>
+        {
+            this.anims.create({
+                key: `walk-${direction}`,
+                frames: [0, 1, 2, 3, 4, 5].map((frame) => ({ key: `walk-${direction}-${frame}` })),
+                frameRate: 10,
+                repeat: -1
+            });
+        });
+    }
+
+    walkToSeat ()
+    {
+        this.player.play('walk-south-east');
+        this.tweens.add({
+            targets: this.player,
+            x: WALK_SOUTHEAST_END.x,
+            y: WALK_SOUTHEAST_END.y,
+            duration: WALK_LEG_MS,
+            onUpdate: () => this.player.setDepth(this.player.y),
+            onComplete: () => this.walkSouthWest()
+        });
+    }
+
+    walkSouthWest ()
+    {
+        if (!this.player?.active)
+        {
+            return;
+        }
+
+        this.player.play('walk-south-west');
+        this.tweens.add({
+            targets: this.player,
+            x: SEAT.x,
+            y: SEAT.y,
+            duration: WALK_LEG_MS,
+            onUpdate: () => this.player.setDepth(this.player.y),
+            onComplete: () => this.sitDown()
+        });
+    }
+
+    sitDown ()
+    {
+        if (!this.player?.active)
+        {
+            return;
+        }
+
+        this.player.stop();
+        this.player.setTexture('sit-south-west');
+        this.player.setDepth(SEAT.y);
+        EventBus.emit('passenger-seated');
     }
 
     createRoom ()
