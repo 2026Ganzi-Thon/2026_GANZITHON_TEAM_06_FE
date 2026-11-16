@@ -1,0 +1,210 @@
+/* 기다림 마치기 화면 전용 스타일 (/finish-waiting)
+ * 색·간격 변수(:root)는 style.css 에 있으므로 style.css 다음에 불러온다. */
+
+.finish-waiting-page {
+    --finish-waiting-coral: #f0745a;
+    --finish-waiting-back-color: #fdf0e2;
+    --finish-waiting-btn-width: 600px;
+    --finish-waiting-btn-height: 100px;
+    --finish-waiting-btn-padding: 28px;
+    --finish-waiting-panel-width: 980px;
+
+    min-height: 100dvh;
+    display: flow-root; /* 자식 margin 이 밖으로 새어 body 의 검은 배경이 보이는 것을 막는다 */
+    background: url('/assets/common/background-exit.png') center / cover no-repeat;
+}
+
+/* 가운데 위에 버튼 3개를 세로로 배치 */
+.finish-waiting-menu {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-sm);
+    width: min(var(--finish-waiting-btn-width), 100% - 2 * var(--space-md));
+    margin: 0 auto;
+    padding-top: var(--space-md);
+}
+
+.finish-waiting-back {
+    align-self: flex-end;
+    margin-right: calc(-6 * var(--space-md));
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--finish-waiting-back-color);
+    text-decoration: none;
+}
+
+.finish-waiting-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    height: var(--finish-waiting-btn-height);
+    padding: 0 var(--finish-waiting-btn-padding);
+    border: 0;
+    background: url('/assets/finish-waiting/btn-unclick.png') center / 100% 100% no-repeat;
+    color: var(--color-brown-stroke);
+    text-align: left;
+    cursor: pointer;
+}
+
+.finish-waiting-btn.is-selected {
+    background-image: url('/assets/finish-waiting/btn-click.png');
+    color: #fff;
+}
+
+/* 다음 단계에서는 버튼만 감추고 자리는 남겨, 아래 패널 위치가 움직이지 않게 한다 */
+.finish-waiting-btn.is-hidden {
+    visibility: hidden;
+}
+
+.finish-waiting-num {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: var(--color-brown-stroke);
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.is-selected .finish-waiting-num {
+    background: #fff;
+    color: var(--finish-waiting-coral);
+}
+
+.finish-waiting-text {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.finish-waiting-text strong {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.finish-waiting-text span {
+    font-size: 13px;
+    font-weight: 400;
+}
+
+.finish-waiting-check {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #fff;
+}
+
+.finish-waiting-check img {
+    width: 15px;
+    height: 15px;
+}
+
+/* 대화 패널: 980x200 비율을 유지하며 화면 폭에 맞춰 줄어든다 */
+.finish-waiting-panel {
+    position: relative;
+    width: min(var(--finish-waiting-panel-width), 100% - 2 * var(--space-md));
+    aspect-ratio: 980 / 200;
+    margin: calc(var(--space-md) + var(--space-sm)) auto var(--space-md);
+    background: url('/assets/common/panel-chat.png') center / 100% 100% no-repeat;
+}
+
+/* 초상화 240x240 은 패널 높이(200)보다 커서 위로 삐져나온다 */
+.finish-waiting-portrait {
+    position: absolute;
+    left: 6%;
+    bottom: 3%;
+    width: calc(240 / 980 * 100%);
+    aspect-ratio: 1;
+}
+
+/* 몽실 역장 이름표·다음 글자는 이미지에 들어 있으므로, 그 위치에 맞춰 글과 버튼만 올린다 */
+.finish-waiting-message {
+    position: absolute;
+    left: 33%;
+    right: 10%;
+    top: 45%;
+    margin: 0;
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--color-brown-title);
+    white-space: pre-line;
+}
+
+.finish-waiting-next {
+    position: absolute;
+    right: 9%;
+    top: 23%;
+    padding: 0;
+    border: 0;
+    background: none;
+    transform: translateY(-50%);
+    cursor: pointer;
+}
+
+.finish-waiting-next img {
+    display: block;
+    width: 120px;
+    height: 40px;
+}
+
+/* 모바일: 버튼과 글자를 줄여 화면 폭에 맞춘다 */
+@media (max-width: 768px) {
+    .finish-waiting-page {
+        --finish-waiting-btn-width: 320px;
+        --finish-waiting-btn-height: 64px;
+        --finish-waiting-btn-padding: 14px;
+    }
+
+    .finish-waiting-menu {
+        gap: 6px;
+    }
+
+    .finish-waiting-back {
+        font-size: 12px;
+    }
+
+    .finish-waiting-btn {
+        gap: 10px;
+    }
+
+    .finish-waiting-num {
+        width: 30px;
+        height: 30px;
+        border-radius: 6px;
+        font-size: 12px;
+    }
+
+    .finish-waiting-text strong {
+        font-size: 14px;
+    }
+
+    .finish-waiting-text span {
+        font-size: 10px;
+    }
+
+    .finish-waiting-check {
+        width: 22px;
+        height: 22px;
+    }
+
+    .finish-waiting-check img {
+        width: 11px;
+        height: 11px;
+    }
+
+    .finish-waiting-message {
+        font-size: 11px;
+    }
+
+    .finish-waiting-next img {
+        width: 90px;
+        height: 30px;
+    }
+}

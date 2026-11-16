@@ -5,6 +5,7 @@ const PAGE_LINKS = [
     { to: '/waiting-room', label: '대기실' },
     { to: '/collection', label: '털실' },
     { to: '/my-sheep', label: '마이 양' },
+    { to: '/finish-waiting', label: '기다림 마치기' },
 ];
 
 export default function PageLinks()

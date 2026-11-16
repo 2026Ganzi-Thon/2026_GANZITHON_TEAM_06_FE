@@ -25,7 +25,7 @@
 
 .my-sheep-tabs {
     position: absolute;
-    /* panel.png의 투명 여백을 제외한 실제 테두리 좌상단에 맞춘다 */
+    /* panel-long.png의 투명 여백을 제외한 실제 테두리 좌상단에 맞춘다 */
     left: 6%;
     top: 4.6%;
     transform: translateY(-100%);
@@ -767,6 +767,8 @@
     }
 
     .my-sheep-grid--storage {
+        /* 임시 조각함 아래에 내 담요 미리보기를 세로로 쌓는다 */
+        grid-template-columns: 1fr;
         grid-template-rows: none;
         margin-bottom: 0;
     }

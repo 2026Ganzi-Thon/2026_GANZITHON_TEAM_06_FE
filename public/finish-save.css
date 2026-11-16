@@ -1,0 +1,90 @@
+/* 담요 조각 저장 화면 전용 스타일 (/finish-waiting/save)
+ * 색·간격 변수(:root)는 style.css 에 있으므로 style.css 다음에 불러온다. */
+
+.finish-save-panel {
+    --finish-save-btn-color: #ff6e52;
+    --finish-save-later-fill: #fadfc0;
+    --finish-save-later-stroke: #59433a;
+
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 560px;
+    height: 520px;
+    max-width: 100vw;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-md);
+    background: url('/assets/common/panel-short.png') center / 100% 100% no-repeat;
+}
+
+.finish-save-title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--color-brown-stroke);
+}
+
+.finish-save-desc {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 400;
+    color: var(--color-brown-stroke);
+}
+
+.finish-save-gift {
+    width: 130px;
+    height: 137px;
+}
+
+.finish-save-btn {
+    width: 280px;
+    padding: var(--space-md) 0;
+    border-radius: 12px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.finish-save-btn-primary {
+    border: 0;
+    background: var(--finish-save-btn-color);
+    font-weight: 700;
+    color: #fff;
+}
+
+.finish-save-btn-later {
+    border: 1px solid var(--finish-save-later-stroke);
+    background: var(--finish-save-later-fill);
+    color: var(--color-brown-stroke);
+}
+
+/* 모바일: 패널(비율 유지)과 내용을 줄여 화면 폭에 맞춘다 */
+@media (max-width: 768px) {
+    .finish-save-panel {
+        width: 280px;
+        height: 260px;
+        gap: var(--space-sm);
+    }
+
+    .finish-save-title {
+        font-size: 14px;
+    }
+
+    .finish-save-desc {
+        font-size: 11px;
+    }
+
+    .finish-save-gift {
+        width: 60px;
+        height: 63px;
+    }
+
+    .finish-save-btn {
+        width: 160px;
+        padding: 8px 0;
+        font-size: 12px;
+    }
+}
