@@ -1,0 +1,8 @@
+{
+    "name": "잠시 정차합니다",
+    "short_name": "잠시 정차",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#000000",
+    "theme_color": "#000000"
+}
