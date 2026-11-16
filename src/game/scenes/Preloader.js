@@ -46,6 +46,7 @@ export class Preloader extends Scene
         this.load.setPath('assets');
         this.load.image('floor', 'backgrounds/tiles/floor_tile_32.png');
         this.load.image('wall', 'backgrounds/tiles/wall_tile_32.png');
+        this.load.image('window', 'backgrounds/tiles/window_64x48.png');
         this.load.image('bench', 'items/bench/bench_full_96x48.png');
 
         SIT_DIRECTIONS.forEach((direction) =>

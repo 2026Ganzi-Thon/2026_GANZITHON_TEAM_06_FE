@@ -1,24 +1,23 @@
 import { Scene } from 'phaser';
 
 import { EventBus } from '../EventBus';
+import { hasEnteredWaitingRoom, markWaitingRoomEntered } from '../waitingRoomEntry';
 
 const TILE_SIZE = 32;
 const ROOM_WIDTH = 1024;
 const ROOM_HEIGHT = 768;
-const WALL_ROWS = 2;
-
+const WALL_ROWS = 5;
 const ENTRANCE_WAIT_MS = 1200;
-const WALK_LEG_MS = 300;
-const ENTRANCE = { x: 220, y: 160 };
-// 걷기 그림이 남동·남서뿐이라 곧장 위로는 가지 않고 대각선 두 번으로 간다.
-const WALK_SOUTHEAST_END = { x: 520, y: 360 };
-const SEAT = { x: 300, y: 500 };
+const WALK_MS = 600;
 
-const SEATED_PASSENGERS = [
-    { x: 180, y: 280, direction: 'south' },
-    { x: 700, y: 300, direction: 'south-east' },
-    { x: 760, y: 480, direction: 'west' },
-];
+// 문은 아래 가운데. 빈 자리는 그 바로 왼쪽 앞줄이라 0.6초 이동이 짧다.
+const ENTRANCE = { x: 512, y: 700 };
+const SEAT = { x: 330, y: 670 };
+
+const WINDOW_POSITIONS = [150, 330, 512, 694, 874];
+const BENCH_COLUMNS = [170, 330, 694, 854];
+const BENCH_ROWS = [250, 390, 530, 670];
+const SEAT_DIRECTIONS = ['south', 'south-east', 'south-west', 'east', 'west'];
 
 export class WaitingRoom extends Scene
 {
@@ -30,24 +29,37 @@ export class WaitingRoom extends Scene
     create ()
     {
         this.createRoom();
+        this.createWindows();
         this.createSeatedPassengers();
         this.addBench(SEAT.x, SEAT.y);
         this.createWalkAnimations();
 
-        this.player = this.add.sprite(ENTRANCE.x, ENTRANCE.y, 'walk-south-east-0');
-        this.player.setDepth(ENTRANCE.y);
-
-        this.time.delayedCall(ENTRANCE_WAIT_MS, () =>
+        if (hasEnteredWaitingRoom())
         {
-            if (!this.player?.active)
+            this.placeSeatedPlayer();
+        }
+        else
+        {
+            this.player = this.add.sprite(ENTRANCE.x, ENTRANCE.y, 'walk-south-west-0');
+            this.player.setDepth(ENTRANCE.y);
+            this.time.delayedCall(ENTRANCE_WAIT_MS, () =>
             {
-                return;
-            }
+                if (!this.player?.active)
+                {
+                    return;
+                }
 
-            this.walkToSeat();
-        });
+                this.walkToSeat();
+            });
+        }
 
         EventBus.emit('current-scene-ready', this);
+    }
+
+    placeSeatedPlayer ()
+    {
+        this.player = this.add.sprite(SEAT.x, SEAT.y, 'sit-south');
+        this.player.setDepth(SEAT.y);
     }
 
     createWalkAnimations ()
@@ -70,30 +82,12 @@ export class WaitingRoom extends Scene
 
     walkToSeat ()
     {
-        this.player.play('walk-south-east');
-        this.tweens.add({
-            targets: this.player,
-            x: WALK_SOUTHEAST_END.x,
-            y: WALK_SOUTHEAST_END.y,
-            duration: WALK_LEG_MS,
-            onUpdate: () => this.player.setDepth(this.player.y),
-            onComplete: () => this.walkSouthWest()
-        });
-    }
-
-    walkSouthWest ()
-    {
-        if (!this.player?.active)
-        {
-            return;
-        }
-
         this.player.play('walk-south-west');
         this.tweens.add({
             targets: this.player,
             x: SEAT.x,
             y: SEAT.y,
-            duration: WALK_LEG_MS,
+            duration: WALK_MS,
             onUpdate: () => this.player.setDepth(this.player.y),
             onComplete: () => this.sitDown()
         });
@@ -107,8 +101,9 @@ export class WaitingRoom extends Scene
         }
 
         this.player.stop();
-        this.player.setTexture('sit-south-west');
+        this.player.setTexture('sit-south');
         this.player.setDepth(SEAT.y);
+        markWaitingRoomEntered();
         EventBus.emit('passenger-seated');
     }
 
@@ -132,14 +127,34 @@ export class WaitingRoom extends Scene
         }
     }
 
+    createWindows ()
+    {
+        WINDOW_POSITIONS.forEach((x) =>
+        {
+            this.add.image(x, 78, 'window').setDepth(1);
+        });
+    }
+
     createSeatedPassengers ()
     {
-        SEATED_PASSENGERS.forEach((passenger) =>
-        {
-            this.addBench(passenger.x, passenger.y);
-            const sheep = this.add.sprite(passenger.x, passenger.y - 16, `sit-${passenger.direction}`);
+        let directionIndex = 0;
 
-            sheep.setDepth(passenger.y);
+        BENCH_ROWS.forEach((y) =>
+        {
+            BENCH_COLUMNS.forEach((x) =>
+            {
+                if (x === SEAT.x && y === SEAT.y)
+                {
+                    return;
+                }
+
+                this.addBench(x, y);
+                const direction = SEAT_DIRECTIONS[directionIndex % SEAT_DIRECTIONS.length];
+                const sheep = this.add.sprite(x, y - 16, `sit-${direction}`);
+
+                sheep.setDepth(y);
+                directionIndex += 1;
+            });
         });
     }
 

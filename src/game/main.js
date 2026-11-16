@@ -1,4 +1,4 @@
-import { AUTO, Game } from 'phaser';
+import { AUTO, Game, Scale } from 'phaser';
 
 import { Boot } from './scenes/Boot';
 import { Preloader } from './scenes/Preloader';
@@ -12,6 +12,10 @@ const config = {
     height: 768,
     parent: 'game-container',
     backgroundColor: '#028af8',
+    scale: {
+        mode: Scale.FIT,
+        autoCenter: Scale.CENTER_BOTH
+    },
     scene: [
         Boot,
         Preloader,

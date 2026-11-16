@@ -3,11 +3,12 @@ import { useEffect, useRef, useState } from 'react';
 import PageLinks from '../components/common/PageLinks';
 import { PhaserGame } from '../PhaserGame';
 import { EventBus } from '../game/EventBus';
+import { hasEnteredWaitingRoom } from '../game/waitingRoomEntry';
 
 export default function WaitingRoomPage()
 {
     const phaserRef = useRef(null);
-    const [isSeated, setIsSeated] = useState(false);
+    const [isSeated, setIsSeated] = useState(hasEnteredWaitingRoom);
 
     useEffect(() =>
     {
