@@ -1,5 +1,19 @@
 import { Scene } from 'phaser';
 
+const SIT_DIRECTIONS = [
+    'east',
+    'north',
+    'north-east',
+    'north-west',
+    'south',
+    'south-east',
+    'south-west',
+    'west'
+];
+
+const WALK_DIRECTIONS = ['south-east', 'south-west'];
+const WALK_FRAME_COUNT = 6;
+
 export class Preloader extends Scene
 {
     constructor ()
@@ -29,19 +43,33 @@ export class Preloader extends Scene
 
     preload ()
     {
-        //  Load the assets for the game - Replace with your own assets
         this.load.setPath('assets');
+        this.load.image('floor', 'backgrounds/tiles/floor_tile_32.png');
+        this.load.image('wall', 'backgrounds/tiles/wall_tile_32.png');
+        this.load.image('window', 'backgrounds/tiles/window_64x48.png');
+        this.load.image('bench', 'items/bench/bench_full_96x48.png');
 
-        this.load.image('logo', 'logo.png');
-        this.load.image('star', 'star.png');
+        SIT_DIRECTIONS.forEach((direction) =>
+        {
+            this.load.image(`sit-${direction}`, `characters/passenger/sit/${direction}.png`);
+        });
+
+        WALK_DIRECTIONS.forEach((direction) =>
+        {
+            for (let frame = 0; frame < WALK_FRAME_COUNT; frame += 1)
+            {
+                const fileIndex = String(frame).padStart(3, '0');
+
+                this.load.image(
+                    `walk-${direction}-${frame}`,
+                    `characters/passenger/walk/${direction}/frame_${fileIndex}.png`
+                );
+            }
+        });
     }
 
     create ()
     {
-        //  When all the assets have loaded, it's often worth creating global objects here that the rest of the game can use.
-        //  For example, you can define global animations here, so we can use them in other scenes.
-
-        //  Move to the MainMenu. You could also swap this for a Scene Transition, such as a camera fade.
-        this.scene.start('MainMenu');
+        this.scene.start('WaitingRoom');
     }
 }
