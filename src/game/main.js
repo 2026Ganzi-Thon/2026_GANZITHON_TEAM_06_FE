@@ -1,10 +1,8 @@
 import { AUTO, Game } from 'phaser';
 
 import { Boot } from './scenes/Boot';
-import { Game as GameScene } from './scenes/Game';
-import { GameOver } from './scenes/GameOver';
-import { MainMenu } from './scenes/MainMenu';
 import { Preloader } from './scenes/Preloader';
+import { WaitingRoom } from './scenes/WaitingRoom';
 
 // Find out more information about the Game Config at:
 // https://docs.phaser.io/api-documentation/typedef/types-core#gameconfig
@@ -17,9 +15,7 @@ const config = {
     scene: [
         Boot,
         Preloader,
-        MainMenu,
-        GameScene,
-        GameOver
+        WaitingRoom
     ]
 };
 
