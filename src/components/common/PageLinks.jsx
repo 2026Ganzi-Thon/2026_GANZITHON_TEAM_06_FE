@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 
-const pages = [
+const PAGE_LINKS = [
     { to: '/', label: '온보딩' },
     { to: '/waiting-room', label: '대기실' },
     { to: '/collection', label: '털실' },
@@ -11,7 +11,7 @@ export default function PageLinks()
 {
     return (
         <nav>
-            {pages.map((page) => (
+            {PAGE_LINKS.map((page) => (
                 <Link key={page.to} to={page.to}>{page.label}</Link>
             ))}
         </nav>

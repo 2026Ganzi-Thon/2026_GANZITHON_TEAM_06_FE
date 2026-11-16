@@ -1,8 +1,9 @@
+import { AUTO, Game } from 'phaser';
+
 import { Boot } from './scenes/Boot';
 import { Game as GameScene } from './scenes/Game';
 import { GameOver } from './scenes/GameOver';
 import { MainMenu } from './scenes/MainMenu';
-import { AUTO, Game } from 'phaser';
 import { Preloader } from './scenes/Preloader';
 
 // Find out more information about the Game Config at:

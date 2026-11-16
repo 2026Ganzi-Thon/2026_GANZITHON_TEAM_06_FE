@@ -1,4 +1,5 @@
 import { forwardRef, useEffect, useLayoutEffect, useRef } from 'react';
+
 import StartGame from './game/main';
 import { EventBus } from './game/EventBus';
 
@@ -6,7 +7,7 @@ export const PhaserGame = forwardRef(function PhaserGame ({ currentActiveScene }
 {
     const game = useRef();
 
-    // Create the game inside a useLayoutEffect hook to avoid the game being created outside the DOM
+    // DOM이 준비된 뒤에 게임을 만들어, 캔버스가 화면 밖에 생기지 않게 합니다.
     useLayoutEffect(() => {
         
         if (game.current === undefined)
@@ -44,7 +45,7 @@ export const PhaserGame = forwardRef(function PhaserGame ({ currentActiveScene }
 
         return () => {
 
-            EventBus.removeListener('current-scene-ready');
+            EventBus.off('current-scene-ready');
 
         }
         
