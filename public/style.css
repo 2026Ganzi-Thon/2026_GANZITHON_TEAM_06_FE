@@ -25,9 +25,11 @@ nav a {
     color: var(--color-text);
 }
 
-main h1 {
+main h1,
+.waiting-room-board,
+.waiting-room-line {
     margin: 0;
-    padding: 0 var(--space-md);
+    padding: 0 var(--space-md) var(--space-sm);
 }
 
 #app {

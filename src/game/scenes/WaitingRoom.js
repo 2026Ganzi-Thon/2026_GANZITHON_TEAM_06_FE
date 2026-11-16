@@ -54,6 +54,11 @@ export class WaitingRoom extends Scene
     {
         ['south-east', 'south-west'].forEach((direction) =>
         {
+            if (this.anims.exists(`walk-${direction}`))
+            {
+                return;
+            }
+
             this.anims.create({
                 key: `walk-${direction}`,
                 frames: [0, 1, 2, 3, 4, 5].map((frame) => ({ key: `walk-${direction}-${frame}` })),
