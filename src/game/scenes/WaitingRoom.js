@@ -1,7 +1,7 @@
 import { Scene } from 'phaser';
 
 import { EventBus } from '../EventBus';
-import { hasEnteredWaitingRoom, markWaitingRoomEntered } from '../waitingRoomEntry';
+import { markWaitingRoomEntered, shouldPlayWaitingRoomEntrance } from '../waitingRoomEntry';
 
 const TILE_SIZE = 32;
 const ROOM_WIDTH = 1024;
@@ -34,11 +34,7 @@ export class WaitingRoom extends Scene
         this.addBench(SEAT.x, SEAT.y);
         this.createWalkAnimations();
 
-        if (hasEnteredWaitingRoom())
-        {
-            this.placeSeatedPlayer();
-        }
-        else
+        if (shouldPlayWaitingRoomEntrance())
         {
             this.player = this.add.sprite(ENTRANCE.x, ENTRANCE.y, 'walk-south-west-0');
             this.player.setDepth(ENTRANCE.y);
@@ -51,6 +47,10 @@ export class WaitingRoom extends Scene
 
                 this.walkToSeat();
             });
+        }
+        else
+        {
+            this.placeSeatedPlayer();
         }
 
         EventBus.emit('current-scene-ready', this);
