@@ -35,6 +35,8 @@ npm run build            # 빌드가 깨지지 않는지 확인
 | `/collection` | 털실 |
 | `/my-sheep` | 마이 양 |
 | `/my-sheep/piece/:pieceId` | 조각 상세 |
+| `/finish-waiting` | 기다림 마치기 |
+| `/finish-waiting/save` | 담요 조각 저장 |
 
 ## 폴더 구조
 ```text

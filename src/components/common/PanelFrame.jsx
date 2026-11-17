@@ -12,7 +12,7 @@ export default function PanelFrame({ actions, onExit, fallbackTo = '/', children
 
     return (
         <div className="my-sheep-panel">
-            <img src="/assets/common/panel.png" alt="" />
+            <img src="/assets/common/panel-long.png" alt="" />
             <div className="my-sheep-actions">
                 {actions}
                 <button type="button" className="my-sheep-exit" aria-label="닫기" onClick={handleExit}>X</button>
