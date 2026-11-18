@@ -1,6 +1,7 @@
 import { Scene } from 'phaser';
 
 import { REACTION_FEEDBACK_MS } from '../../data/waitingRoomBroadcast';
+import { WAITING_ROOM_TRAIN_CLOCK_SYNC } from '../../services/waitingRoom.js';
 import { EventBus } from '../EventBus';
 import { WAITING_ROOM_DEMO_OCCUPANTS } from '../objects/waitingRoomDemoOccupants';
 import {
@@ -134,7 +135,12 @@ export class WaitingRoom extends Scene
         this.input.on('pointermove', this.handlePanDrag, this);
         this.input.on('wheel', this.handlePanWheel, this);
 
-        // 열차는 평소엔 창 밖에 있다가, 30분(서버 간격)마다 한 번 오른쪽에서 왼쪽으로 지나간다.
+        this._trainPassing = false;
+        this.trainPassTween = null;
+        this.handleTrainClockSync = () => this.rescheduleTrain();
+        EventBus.on(WAITING_ROOM_TRAIN_CLOCK_SYNC, this.handleTrainClockSync);
+
+        // 열차는 서버 간격마다 오른쪽에서 왼쪽으로 지나간다.
         this.scheduleTrain();
 
         // 열차가 지나가 털실이 쌓였는지 1초마다 확인해 털실 모양을 바꾼다.
@@ -200,6 +206,14 @@ export class WaitingRoom extends Scene
         this.trainSound?.stop();
         this.clearAllReactionEmojis();
         this.occupantsByTicketId.clear();
+
+        if (this.handleTrainClockSync)
+        {
+            EventBus.off(WAITING_ROOM_TRAIN_CLOCK_SYNC, this.handleTrainClockSync);
+        }
+
+        this.clearTrainSchedule();
+
         EventBus.off('wool-deliver', this.handleWoolDeliver);
         EventBus.off('wool-reset', this.handleWoolReset);
         this.scale.off('resize', this.updateRoomLayout, this);
@@ -289,6 +303,39 @@ export class WaitingRoom extends Scene
         this.layoutWool();
     }
 
+    clearTrainTimer ()
+    {
+        if (this.trainTimer)
+        {
+            this.trainTimer.remove(false);
+            this.trainTimer = null;
+        }
+    }
+
+    clearTrainPassTween ()
+    {
+        if (this.trainPassTween)
+        {
+            this.trainPassTween.stop();
+            this.trainPassTween = null;
+            this._trainPassing = false;
+            this.trainSound?.stop();
+        }
+    }
+
+    clearTrainSchedule ()
+    {
+        this.clearTrainTimer();
+        this.clearTrainPassTween();
+    }
+
+    rescheduleTrain ()
+    {
+        // 시계 동기화는 다음 통과 예약만 바꾼다. 통과 연출 트윈은 끝까지 재생한다.
+        this.clearTrainTimer();
+        this.scheduleTrain();
+    }
+
     scheduleTrain ()
     {
         const delay = msUntilNextTrain(readOnboardingTrip());
@@ -307,17 +354,29 @@ export class WaitingRoom extends Scene
 
     playTrainPass ()
     {
+        if (this._trainPassing)
+        {
+            return;
+        }
+
+        this._trainPassing = true;
+
         // 열차가 지나갔다는 안내를 React가 띄우도록 알립니다.
         EventBus.emit('train-passed');
         this.trainTextureX = TRAIN_START_X;
+        if (this.trainPassTween)
+        {
+            this.trainPassTween.stop();
+        }
+
         // 열차가 지나가는 동안 소리를 반복 재생하고, 다 지나가면 멈춘다.
         this.trainSound ??= this.sound.add('train-sound', { loop: true });
         this.trainSound.play({ volume: 0 });
-        this.tweens.add({
+
+        this.trainPassTween = this.tweens.add({
             targets: this,
             trainTextureX: TRAIN_END_X,
             duration: TRAIN_PASS_MS,
-            onComplete: () => this.trainSound.stop(),
             onUpdate: (tween) =>
             {
                 // 처음 TRAIN_FADE 구간은 작게 시작해 커지고, 마지막 TRAIN_FADE 구간은 점점 작아진다.
@@ -325,10 +384,19 @@ export class WaitingRoom extends Scene
 
                 this.trainSound.setVolume(Math.max(0, Math.min(1, progress / TRAIN_FADE, (1 - progress) / TRAIN_FADE)));
 
-                const x = this.textureToWorld(this.trainTextureX, 0).x;
+                const trainPos = this.textureToWorld(this.trainTextureX, TRAIN_TEXTURE.y);
 
-                this.train.setX(x);
-                this.steam.setX(x + STEAM_OFFSET.x * this.roomScale);
+                this.train.setPosition(trainPos.x, trainPos.y);
+                this.steam.setPosition(
+                    trainPos.x + STEAM_OFFSET.x * this.roomScale,
+                    trainPos.y + STEAM_OFFSET.y * this.roomScale
+                );
+            },
+            onComplete: () =>
+            {
+                this._trainPassing = false;
+                this.trainPassTween = null;
+                this.trainSound.stop();
             }
         });
     }
