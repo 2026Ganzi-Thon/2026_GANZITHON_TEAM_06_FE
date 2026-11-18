@@ -1,31 +1,26 @@
-import { Boot } from './scenes/Boot';
-import { Game as GameScene } from './scenes/Game';
-import { GameOver } from './scenes/GameOver';
-import { MainMenu } from './scenes/MainMenu';
-import { AUTO, Game } from 'phaser';
-import { Preloader } from './scenes/Preloader';
+import { AUTO, Game, Scale } from 'phaser';
 
-// Find out more information about the Game Config at:
-// https://docs.phaser.io/api-documentation/typedef/types-core#gameconfig
+import { Boot } from './scenes/Boot';
+import { Preloader } from './scenes/Preloader';
+import { WaitingRoom } from './scenes/WaitingRoom';
+
 const config = {
     type: AUTO,
-    width: 1024,
-    height: 768,
+    width: 1442,
+    height: 841,
     parent: 'game-container',
-    backgroundColor: '#028af8',
+    backgroundColor: '#000000',
+    scale: {
+        mode: Scale.RESIZE,
+        autoCenter: Scale.CENTER_BOTH
+    },
     scene: [
         Boot,
         Preloader,
-        MainMenu,
-        GameScene,
-        GameOver
+        WaitingRoom
     ]
 };
 
-const StartGame = (parent) => {
-
-    return new Game({ ...config, parent });
-
-}
+const StartGame = (parent) => new Game({ ...config, parent });
 
 export default StartGame;

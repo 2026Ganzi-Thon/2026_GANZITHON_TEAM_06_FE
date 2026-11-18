@@ -1,24 +1,2208 @@
+:root {
+    --color-text: rgba(255, 255, 255, 0.87);
+    --color-text-muted: rgba(255, 255, 255, 0.3);
+    --color-bg: #000000;
+    --color-accent: #0ec3c9;
+    --color-ink: #422d27;
+    --color-brown-title: #422d27;
+    --color-brown-text: #78645b;
+    --color-brown-stroke: #6d4344;
+    --color-cream: #fef3e6;
+    --color-peach: #fadfc0;
+    --color-brown-dark: #59433a;
+    --color-coral: #ff6e52;
+    --color-call: #ff4141;
+    --color-bar: #dc7e63;
+    --color-fill: #fee5cd;
+    --space-sm: 10px;
+    --space-md: 16px;
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+}
+
 body {
     margin: 0;
     padding: 0;
-    color: rgba(255, 255, 255, 0.87);
-    background-color: #000000; 
-    font-family: Arial, Helvetica, sans-serif;
+    color: var(--color-text);
+    background-color: var(--color-bg);
+    font-family: 'Pretendard Variable', Pretendard, -apple-system, 'Segoe UI', sans-serif;
 }
 
 nav {
     display: flex;
-    gap: 16px;
-    padding: 16px;
+    gap: var(--space-md);
+    padding: var(--space-md);
 }
 
 nav a {
-    color: rgba(255, 255, 255, 0.87);
+    color: var(--color-text);
 }
 
-main h1 {
+main h1,
+.waiting-room-board,
+.waiting-room-line {
     margin: 0;
-    padding: 0 16px;
+    padding: 0 var(--space-md) var(--space-sm);
+}
+
+.onboarding {
+    --color-coral: #ff6e52;
+    --color-cream: #fcefde;
+    --color-ink: #422d27;
+    width: 100%;
+    min-height: 100vh;
+    box-sizing: border-box;
+    background: #fff center / cover no-repeat;
+    color: var(--color-ink);
+    padding: 0 0 var(--space-md);
+}
+
+main.onboarding-start {
+    background-image: url("/assets/backgrounds/onboarding/s00.png");
+}
+
+main.onboarding-greeting,
+main.onboarding-room,
+main.onboarding-status {
+    background-image: url("/assets/backgrounds/onboarding/s01.png");
+}
+
+main.onboarding-ticket {
+    background-image: url("/assets/backgrounds/onboarding/s04.png");
+}
+
+.app-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    min-height: 64px;
+    padding: 8px var(--space-md);
+    background: var(--color-cream);
+}
+
+/* 드래그하면 접히는 헤더(collapseOnDrag): 위로 밀려 올라가고, 아래 내용이 그 자리를 채운다. */
+.app-header {
+    transition: translate 0.3s ease, margin-bottom 0.3s ease;
+}
+
+.app-header.is-collapsed {
+    translate: 0 -100%;
+    margin-bottom: calc(-1 * var(--app-header-h, 0px));
+}
+
+.app-header-logo {
+    width: 44px;
+    height: 44px;
+    flex: none;
+}
+
+.app-header-note {
+    flex: 1;
+    margin: 0;
+    text-align: left;
+    font-size: clamp(12px, 1.6vw, 16px);
+}
+
+.app-header-note strong {
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.app-header-actions {
+    display: flex;
+    gap: var(--space-sm);
+    flex: none;
+}
+
+.app-header-actions button {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    cursor: pointer;
+}
+
+.app-header-actions img {
+    display: block;
+    height: 40px;
+    width: auto;
+}
+
+/* 모바일: 문구가 좁은 칸에서 겹치지 않게 다음 줄로 내린다 */
+@media (max-width: 600px) {
+    .app-header {
+        flex-wrap: wrap;
+        gap: 4px var(--space-sm);
+    }
+
+    .app-header-logo {
+        margin-right: auto;
+    }
+
+    .app-header-note {
+        order: 3;
+        flex: 1 0 100%;
+    }
+}
+
+.safety-panel {
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-md);
+}
+
+.safety-panel-backdrop {
+    position: absolute;
+    inset: 0;
+    border: 0;
+    background: rgba(34, 24, 20, 0.4);
+    cursor: pointer;
+}
+
+.safety-panel-card {
+    position: relative;
+    box-sizing: border-box;
+    width: min(96vw, 125vh, 1000px); /* 털실 톡톡 패널과 같은 크기 */
+    aspect-ratio: 3 / 2;
+    background: url("/assets/common/panel-long.png") center / 100% 100% no-repeat;
+    color: var(--color-ink);
+    padding: 5% 5% 6%;
+    text-align: center;
+}
+
+.safety-panel-bar {
+    display: block;
+    width: 80px;
+    height: 10px;
+    margin: -10px auto 12px;
+    border-radius: 10px;
+    background: var(--color-bar);
+}
+
+.safety-panel-card h2 {
+    margin: 0 0 8px;
+    color: var(--color-brown-title);
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.safety-panel-card > p {
+    margin: 0 0 20px;
+    color: var(--color-brown-stroke);
+    font-size: 16px;
+    font-weight: 400;
+}
+
+.safety-panel-text {
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+}
+
+.safety-panel-text p {
+    margin: 0;
+}
+
+.safety-panel-line {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-sm);
+    color: var(--color-brown-stroke);
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.safety-panel-number {
+    color: var(--color-call);
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.safety-panel-sub {
+    color: var(--color-brown-stroke);
+    font-size: 16px;
+    font-weight: 400;
+}
+
+.safety-panel-card ul {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.safety-panel-card li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--color-brown-stroke);
+    border-radius: 16px;
+    background: var(--color-fill);
+}
+
+.safety-panel-call {
+    display: flex;
+    align-items: center;
+    width: 203px;
+    height: 46px;
+    box-sizing: border-box;
+    padding-left: var(--space-md);
+    background: url("/assets/help/call-btn.png") center / 100% 100% no-repeat;
+    color: var(--color-brown-stroke);
+    font-size: 16px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.safety-panel-call span {
+    flex: 1;
+    text-align: center;
+}
+
+/* 모바일(세로·가로): 안전 안내 패널은 3:2 비율을 풀고 내용 높이에 맞춘다. 항목은 아이콘·글 한 줄 + 전화 버튼 한 줄로 쌓고, 높이가 모자라면 안에서 스크롤한다 */
+@media (max-width: 640px), (max-height: 500px) {
+    .safety-panel-card {
+        width: min(94vw, 720px);
+        max-height: 92dvh;
+        aspect-ratio: auto;
+        display: flex; /* 제목은 고정하고 항목 목록만 패널 안에서 스크롤 */
+        flex-direction: column;
+        overflow: hidden;
+        padding: 30px 7% 34px; /* 바를 아래로 내리고, 목록이 패널 테두리 밖으로 나가지 않게 여백을 둔다 */
+    }
+
+    .safety-panel-bar {
+        flex: none;
+        margin: 0 auto 6px;
+    }
+
+    .safety-panel-card h2,
+    .safety-panel-card > p {
+        flex: none;
+    }
+
+    .safety-panel-card h2 {
+        margin-bottom: 2px;
+        font-size: 17px;
+    }
+
+    .safety-panel-card > p {
+        margin-bottom: 8px;
+        font-size: 11px;
+    }
+
+    .safety-panel-card ul {
+        gap: 6px;
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+    }
+
+    .safety-panel-card li {
+        flex-wrap: nowrap; /* 아이콘 · 글 · 전화 버튼을 한 줄에 */
+        gap: 8px;
+        padding: 6px 10px;
+        border-radius: 12px;
+    }
+
+    .safety-panel-card li > img {
+        width: 30px;
+        height: auto;
+    }
+
+    .safety-panel-line {
+        flex-wrap: wrap;
+        gap: 2px 6px;
+        font-size: 13px;
+    }
+
+    .safety-panel-number,
+    .safety-panel-sub {
+        font-size: 11px;
+    }
+
+    .safety-panel-call {
+        flex: none;
+        width: 92px;
+        height: 30px;
+        padding-left: 6px;
+        font-size: 11px;
+    }
+
+    .safety-panel-call img {
+        width: 14px;
+        height: auto;
+    }
+}
+
+/* 모바일 세로: 패널을 조금 더 높게 */
+@media (max-width: 640px) and (orientation: portrait) {
+    .safety-panel-card {
+        min-height: 62dvh;
+    }
+}
+
+section.onboarding-status,
+.onboarding-error {
+    max-width: 720px;
+    margin: 28px auto var(--space-md);
+    padding: 0 var(--space-md);
+    text-align: center;
+}
+
+.onboarding-error {
+    color: #8b2e24;
+}
+
+section.onboarding-start {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-md);
+    padding: 48px var(--space-md);
+    position: sticky; /* 스크롤해도 제목·부제목·버튼이 화면 위쪽에 같이 따라온다 */
+    top: 0;
+}
+
+/* 승차권이 화면 가운데에 오도록: 위(안내 글)·가운데(승차권)·아래(버튼)를 세 줄로 나누고 위·아래 줄이 같은 높이를 갖게 한다 */
+.ticket-step {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    display: grid;
+    grid-template-rows: 1fr auto 1fr;
+    justify-items: center;
+    padding: 0 var(--space-md);
+    pointer-events: none; /* 위에 얹힌 레이어가 헤더 클릭을 막지 않게 한다 */
+}
+
+.ticket-step > * {
+    pointer-events: auto;
+}
+
+.ticket-step-top,
+.ticket-step-bottom {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.ticket-step-top {
+    align-self: end;
+    padding-bottom: var(--space-md);
+}
+
+.ticket-step-bottom {
+    align-self: start;
+    padding-top: var(--space-md);
+}
+
+/* 화면 높이가 낮으면 가운데 맞춤 대신 위에서부터 쌓는다 */
+@media (max-height: 560px) {
+    .ticket-step {
+        position: static;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-md);
+        padding: 48px var(--space-md);
+        pointer-events: auto;
+    }
+
+    .ticket-step-top,
+    .ticket-step-bottom {
+        align-self: center; /* 세 줄 배치용 end/start 정렬이 세로 쌓기에서는 좌우로 쏠리게 하므로 가운데로 */
+        padding: 0;
+    }
+}
+
+.onboarding-title,
+.onboarding-subtitle {
+    display: block;
+    width: min(100%, 520px);
+    height: auto;
+}
+
+.onboarding-pill,
+.onboarding-skip,
+.onboarding-chip {
+    border: 0;
+    font: inherit;
+    cursor: pointer;
+}
+
+.onboarding-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    border-radius: 999px;
+    background: var(--color-coral);
+    color: #fff;
+    padding: 12px 28px;
+}
+
+/* 첫 화면 진입: 제목 → 부제목 → 버튼이 차례로 천천히 떠오른다 */
+.onboarding-start .onboarding-title,
+.onboarding-start .onboarding-subtitle,
+.onboarding-start .onboarding-pill {
+    animation: onboarding-start-in 0.9s ease-out backwards;
+}
+
+.onboarding-start .onboarding-subtitle { animation-delay: 0.4s; }
+.onboarding-start .onboarding-pill { animation-delay: 0.8s; }
+
+@keyframes onboarding-start-in {
+    from { opacity: 0; transform: translateY(16px); }
+}
+
+/* 대합실 들어가기: 커서를 올리면 뜨면서 커지고, 재생 아이콘이 앞으로 밀린다 */
+.onboarding-start .onboarding-pill {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.onboarding-start .onboarding-pill:hover:not(:disabled) {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 8px 16px rgba(255, 110, 82, 0.4);
+}
+
+.onboarding-start .onboarding-pill:active:not(:disabled) {
+    transform: scale(0.97);
+}
+
+.onboarding-start .onboarding-play {
+    transition: translate 0.2s ease;
+}
+
+.onboarding-start .onboarding-pill:hover .onboarding-play {
+    translate: 3px 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .onboarding-start .onboarding-title,
+    .onboarding-start .onboarding-subtitle,
+    .onboarding-start .onboarding-pill,
+    .onboarding-start .onboarding-play { animation: none; transition: none; }
+}
+
+.onboarding-play {
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 7px 0 7px 12px;
+    border-color: transparent transparent transparent #fff;
+}
+
+.onboarding-speaker {
+    width: 20px;
+    height: 20px;
+    flex: none;
+}
+
+.onboarding-broadcast {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    width: fit-content;
+    max-width: calc(100% - 32px);
+    margin: 28px auto var(--space-md);
+    padding: 12px 22px;
+    border-radius: 999px;
+    background: var(--color-coral);
+    color: #fff;
+    text-align: center;
+}
+
+.onboarding-skip {
+    border: 1px solid var(--color-ink);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--color-ink);
+    padding: 6px 14px;
+}
+
+.onboarding-pill:disabled,
+.onboarding-skip:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+}
+
+.onboarding-choices,
+.onboarding-chips {
+    display: grid;
+    gap: var(--space-sm);
+    margin: 28px 0 var(--space-md);
+    padding: 0;
+    list-style: none;
+}
+
+.onboarding-choices {
+    max-width: 632px; /* 버튼 너비 600px + 좌우 여백 */
+    margin-left: auto;
+    margin-right: auto;
+    padding-right: var(--space-md);
+    padding-left: var(--space-md);
+}
+
+/* 대기실 선택 버튼: 위로 떠오르며 차례로 나타나고, 호버하면 살짝 뜬다 */
+.onboarding-choices li {
+    animation: onboarding-choice-in 0.5s ease-out backwards;
+}
+
+.onboarding-choices li:nth-child(2) { animation-delay: 0.12s; }
+.onboarding-choices li:nth-child(3) { animation-delay: 0.24s; }
+
+/* 대기실 선택 버튼의 번호 사각형: 기다림 마치기 화면보다 조금 작게 */
+.onboarding-choices .finish-waiting-num {
+    width: 34px;
+    height: 34px;
+    font-size: 13px;
+}
+
+@media (max-width: 768px) {
+    .onboarding-choices .finish-waiting-num {
+        width: 26px;
+        height: 26px;
+        font-size: 11px;
+    }
+}
+
+.onboarding-choices button {
+    transition: transform 0.2s ease;
+}
+
+.onboarding-choices button:hover {
+    transform: translateY(-4px);
+}
+
+.onboarding-choices button:active {
+    transform: scale(0.98);
+}
+
+@keyframes onboarding-choice-in {
+    from { opacity: 0; transform: translateY(24px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .onboarding-choices li,
+    .onboarding-choices button { animation: none; transition: none; }
+}
+
+.onboarding-chips {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    max-width: 1000px; /* 칩이 화면 폭만큼 커지지 않게 한다 (칩 하나가 약 236 x 72px) */
+    margin-top: 120px; /* 위쪽 여백을 늘려 칩을 아래로 내린다 */
+    margin-left: auto;
+    margin-right: auto;
+    padding-right: var(--space-md);
+    padding-left: var(--space-md);
+}
+
+/* 상태 칩: 선택 전은 chip-off.png, 선택하면 chip-on.png. 선택하면 오른쪽 위에 흰 원 안의 체크를 보여 준다 */
+.onboarding-chip {
+    position: relative;
+    width: 100%;
+    height: 72px; /* 높이는 고정하고 너비만 목록 폭에 맞춰 늘린다 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 12px;
+    background: url('/assets/backgrounds/onboarding/chip-off.png') center / 100% 100% no-repeat;
+    color: #422d27;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.onboarding-chip.is-selected {
+    background-image: url('/assets/backgrounds/onboarding/chip-on.png');
+    color: #fff;
+}
+
+/* 상태 칩: 차례로 나타나고, 호버하면 뜨고, 선택하면 톡 튀어 오른다 */
+.onboarding-chips li {
+    animation: onboarding-choice-in 0.5s ease-out backwards;
+}
+
+.onboarding-chips li:nth-child(2) { animation-delay: 0.08s; }
+.onboarding-chips li:nth-child(3) { animation-delay: 0.16s; }
+.onboarding-chips li:nth-child(4) { animation-delay: 0.24s; }
+.onboarding-chips li:nth-child(5) { animation-delay: 0.32s; }
+.onboarding-chips li:nth-child(n+6) { animation-delay: 0.4s; }
+
+.onboarding-chip {
+    transition: transform 0.2s ease;
+}
+
+.onboarding-chip:hover {
+    transform: translateY(-3px);
+}
+
+.onboarding-chip.is-selected {
+    animation: onboarding-chip-pop 0.35s ease-out;
+}
+
+.onboarding-chip.is-selected .finish-waiting-check {
+    animation: onboarding-chip-pop 0.35s ease-out 0.1s backwards;
+}
+
+@keyframes onboarding-chip-pop {
+    0% { transform: scale(0.9); }
+    60% { transform: scale(1.06); }
+    100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .onboarding-chips li,
+    .onboarding-chip,
+    .onboarding-chip.is-selected,
+    .onboarding-chip.is-selected .finish-waiting-check { animation: none; transition: none; }
+}
+
+.onboarding-chip .finish-waiting-check {
+    position: absolute;
+    top: 12%;
+    right: 4%;
+    width: 22px;
+    height: 22px;
+}
+
+.onboarding-chip .finish-waiting-check img {
+    width: 11px;
+    height: 11px;
+}
+
+@media (max-width: 600px) {
+    .onboarding-chip {
+        height: auto;
+        aspect-ratio: 258 / 86;
+        padding: 0 4px;
+        font-size: 12px;
+    }
+}
+
+/* 온보딩 몽실 역장 대화: 화면 아래쪽에 놓는다 (패널 모양은 finish-waiting.css의 대화 패널을 그대로 쓴다) */
+.onboarding-chat {
+    --finish-waiting-panel-width: 920px;
+
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 77%;
+    z-index: 2;
+    transform: translateY(-50%);
+    pointer-events: none; /* 투명한 빈 곳이 아래 화면을 막지 않게 한다 */
+}
+
+.onboarding-chat .finish-waiting-panel {
+    pointer-events: auto;
+}
+
+/* 모바일 세로: 패널 폭에 맞춰 다음·건너뛰기 버튼을 줄이고, 건너뛰기는 다음 버튼 왼쪽(같은 줄)에 둬 패널 밖으로 넘치지 않게 한다 */
+.onboarding-chat .finish-waiting-panel {
+    container-type: inline-size;
+}
+
+@media (max-width: 640px) and (orientation: portrait) {
+    .onboarding-chat .finish-waiting-next img,
+    .onboarding-chat .finish-waiting-extra-btn {
+        width: 20cqw;
+        height: 6.7cqw;
+    }
+
+    .onboarding-chat .finish-waiting-extra {
+        right: calc(9% + 22cqw);
+        top: 23%;
+        transform: translateY(-50%);
+    }
+
+    .onboarding-chat .finish-waiting-extra-btn {
+        font-size: 2.8cqw;
+    }
+
+    .onboarding-chat .finish-waiting-message {
+        font-size: 3cqw;
+    }
+}
+
+.onboarding-chat .finish-waiting-panel.is-closing {
+    pointer-events: none;
+}
+
+.onboarding-chat .finish-waiting-panel {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+/* 모바일 가로 화면(높이가 낮은 화면): 크기를 화면 높이(vh) 기준으로 줄여 비율을 유지하고 한 화면에 담는다 */
+@media (orientation: landscape) and (max-height: 500px) {
+    section.onboarding-start {
+        gap: 2vh;
+        padding: 3vh var(--space-md);
+    }
+
+    .onboarding-title {
+        width: auto;
+        max-width: 100%;
+        max-height: 36vh;
+    }
+
+    .onboarding-subtitle {
+        width: auto;
+        max-width: 100%;
+        max-height: 8vh;
+    }
+
+    .onboarding-pill {
+        padding: 1.5vh 24px;
+    }
+
+    .onboarding-broadcast {
+        margin: 3vh auto 2vh;
+        padding: 1.5vh 22px;
+        font-size: 13px;
+    }
+
+    .onboarding .onboarding-choices,
+    .onboarding .onboarding-chips {
+        margin-top: 2vh;
+        margin-bottom: 0;
+        gap: 1.5vh;
+    }
+
+    .onboarding .onboarding-choices {
+        --finish-waiting-btn-height: 14vh;
+        --finish-waiting-btn-padding: 14px;
+        max-width: min(632px, 120vh);
+    }
+
+    .onboarding .onboarding-chips {
+        margin-top: 4vh;
+        max-width: min(1000px, 200vh);
+    }
+
+    .onboarding .onboarding-chip {
+        height: 11vh;
+        aspect-ratio: auto;
+        font-size: 13px;
+    }
+
+    /* 대화창: 비율(985 x 207)은 그대로, 폭을 높이 기준으로 줄이고 글자도 같이 줄인다 */
+    .onboarding-chat {
+        --finish-waiting-panel-width: 110vh;
+
+        top: auto;
+        bottom: 2vh;
+        transform: none;
+    }
+
+    .onboarding-chat .finish-waiting-message {
+        font-size: 2.4vh;
+    }
+
+    .onboarding-chat .finish-waiting-next img,
+    .onboarding-chat .finish-waiting-extra-btn {
+        width: 14vh;
+        height: 4.7vh;
+    }
+
+    .onboarding-chat .finish-waiting-extra,
+    .onboarding-chat .finish-waiting-extra-btn {
+        font-size: 1.8vh;
+    }
+
+    .onboarding-chat .finish-waiting-extra {
+        top: calc(23% + 2.4vh + 4px);
+    }
+
+    .ticket-step {
+        gap: 1.5vh;
+        padding: 2vh var(--space-md);
+    }
+
+    .ticket-step .ticket-sparkle {
+        width: 13vh;
+    }
+
+    .ticket-step .ticket-caption {
+        font-size: 16px;
+    }
+
+    .ticket-step .ticket {
+        width: min(100%, 560px, 90vh); /* 승차권(2492 x 1040)의 높이가 화면 높이의 약 36%가 되게 */
+    }
+
+    .ticket-step .ticket-pill {
+        min-width: 0;
+        padding: 1.5vh 28px;
+    }
+}
+
+.ticket {
+    position: relative;
+    container-type: inline-size;
+    width: min(100%, 560px);
+}
+
+.ticket img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.ticket-destination,
+.ticket-number {
+    position: absolute;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    color: #222;
+}
+
+.ticket-destination {
+    left: 4.6%; /* '행선지 안내' 글자의 왼쪽 끝에 맞춘다 */
+    top: 41%;
+    width: 32%;
+    height: 18%;
+    font-size: min(20px, 3.125cqw); /* 승차권이 640px일 때 20px, 작아지면 같이 줄어든다 */
+    font-weight: 700;
+    color: #333333;
+}
+
+.ticket-number {
+    left: 4.65%;
+    top: 71.92%;
+    width: 24.52%;
+    height: 18.75%;
+    justify-content: center; /* 점선 사각형 가운데 */
+    font-size: min(24px, 3.75cqw); /* 승차권이 640px일 때 24px */
+    font-weight: 500;
+    color: #ff6e52;
+    line-height: 1;
+}
+
+.ticket-sparkle {
+    width: min(150px, 35%);
+    height: auto;
+}
+
+.ticket-caption {
+    margin: 0;
+    text-align: center;
+    font-size: clamp(16px, 5vw, 24px);
+    font-weight: 700;
+    color: #fff;
+    transform: translateY(-8px); /* 살짝 위로 */
+}
+
+/* 승차권 받기 버튼: 공용 알약 모양 대신 모서리 12px의 넓은 버튼 */
+.ticket-pill {
+    justify-content: center;
+    min-width: 260px;
+    padding: 14px 28px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.ticket-pill-icon {
+    width: 24px;
+    height: auto;
+}
+
+/* 등장 연출: 승차권이 오른쪽에서 열차처럼 들어와 자리 잡고, 안내 글은 위에서, 버튼은 아래에서 뒤따라 나타난다 */
+.ticket {
+    animation: ticket-enter 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+}
+
+.ticket-step-top {
+    animation: ticket-fade-in 0.6s ease-out 0.3s both;
+}
+
+.ticket-step-bottom {
+    animation: ticket-fade-in 0.6s ease-out 0.6s both;
+}
+
+@keyframes ticket-enter {
+    from { opacity: 0; transform: translateX(80px) scale(0.96); }
+    to { opacity: 1; transform: none; }
+}
+
+@keyframes ticket-fade-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+}
+
+/* 발급 연출: 승차권이 아래에서 올라와 자리 잡고, 번호가 도장처럼 찍히고, 위의 반짝이가 한 번 커진다 */
+.ticket.is-issued {
+    animation: ticket-print 0.8s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+.ticket.is-issued .ticket-number {
+    animation: ticket-number-stamp 0.5s ease-out 0.7s both;
+}
+
+.ticket-step.is-issued .ticket-sparkle {
+    animation: ticket-sparkle-pulse 0.9s ease-out;
+}
+
+@keyframes ticket-print {
+    0% { opacity: 0.55; transform: translateY(40px) scale(0.96); filter: brightness(1.15); }
+    60% { opacity: 1; transform: translateY(-8px) scale(1.01); }
+    100% { opacity: 1; transform: none; filter: none; }
+}
+
+@keyframes ticket-number-stamp {
+    from { opacity: 0; transform: scale(1.6); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes ticket-sparkle-pulse {
+    40% { transform: scale(1.25); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ticket,
+    .ticket-step-top,
+    .ticket-step-bottom,
+    .ticket.is-issued,
+    .ticket.is-issued .ticket-number,
+    .ticket-step.is-issued .ticket-sparkle {
+        animation: none;
+    }
+}
+
+body:has(main.waiting-room) {
+    position: fixed; /* 모바일에서 드래그로 페이지 전체가 밀리거나 튕기지 않게 */
+    inset: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+}
+
+.waiting-room-stage {
+    touch-action: none; /* 드래그는 Phaser 배경 스크롤에만 쓰고, 패널은 제자리에 둔다 */
+}
+
+.waiting-room {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+    box-sizing: border-box;
+    background: #000;
+    color: var(--color-ink);
+}
+
+.waiting-room .app-header,
+.onboarding .app-header,
+.my-sheep-page .app-header,
+.finish-waiting-page .app-header {
+    position: sticky; /* 스크롤해도 맨 위에 붙어 있게 */
+    top: 0;
+    z-index: 5; /* 아래 요소에 가려지지 않게 */
+    color: var(--color-ink);
+    flex: 0 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 0;
+    padding: 4px var(--space-md);
+    border-radius: 0 0 var(--space-sm) var(--space-sm);
+}
+
+.waiting-room .app-header-logo,
+.onboarding .app-header-logo,
+.my-sheep-page .app-header-logo,
+.finish-waiting-page .app-header-logo {
+    width: 36px;
+    height: 36px;
+}
+
+.waiting-room .app-header-note,
+.onboarding .app-header-note,
+.my-sheep-page .app-header-note,
+.finish-waiting-page .app-header-note {
+    font-size: clamp(11px, 1.1vw, 14px);
+}
+
+.waiting-room .app-header-actions img,
+.onboarding .app-header-actions img,
+.my-sheep-page .app-header-actions img,
+.finish-waiting-page .app-header-actions img {
+    height: 36px;
+    width: auto;
+}
+
+.waiting-room-stage {
+    position: relative;
+    container-type: size;
+    container-name: waiting-stage;
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: 0;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    overflow: hidden;
+    background: #2f211c;
+    box-shadow: none;
+}
+
+.waiting-room-stage #game-container {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
+}
+
+.waiting-room-stage #game-container canvas {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.waiting-room-wool-label {
+    position: absolute;
+    z-index: 1;
+    translate: -50% 0;
+    padding: 0.35em 0.6em;
+    border-radius: 0.5em;
+    background: #fff;
+    color: #000;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+/* 털실 톡톡 패널 (panel-long.png는 가장자리가 투명해서 패딩으로 안쪽 여백을 맞춘다) */
+.wool-panel-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 5; /* 하단 액션 바(z-index 4)까지 같이 dim */
+    display: grid;
+    place-items: center;
+    background: rgba(0, 0, 0, 0.5); /* 뒤 배경 dim */
+}
+
+.wool-panel-backdrop[hidden] {
+    display: none;
+}
+
+.wool-panel {
+    box-sizing: border-box;
+    width: min(96vw, 125vh, 1000px); /* 3:2 비율이라 높이 기준으로도 제한 */
+    aspect-ratio: 3 / 2;
+    display: flex;
+    flex-direction: column;
+    padding: 3.8% 6% 5.2%; /* %는 너비 기준 */
+    background: url('/assets/common/panel-long.png') center / 100% 100% no-repeat;
+}
+
+.wool-panel-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-sm);
+    min-height: 0;
+    translate: 0 2%; /* 하트·버튼을 헤더에서 떨어뜨려 아래로 (%는 본문 너비 기준) */
+}
+
+.wool-pattern {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    aspect-ratio: 1;
+    margin-top: -1%; /* 살짝 키움 */
+}
+
+/* 도안 바꾸기: 이전 도안이 뒤집혀 사라지고(out), 새 도안이 반대쪽에서 뒤집혀 나온다(in) */
+.wool-pattern.is-flip-out {
+    animation: wool-pattern-flip-out 0.25s ease-in forwards;
+}
+
+.wool-pattern.is-flip-in {
+    animation: wool-pattern-flip-in 0.35s ease-out;
+}
+
+@keyframes wool-pattern-flip-out {
+    to { transform: scaleX(0); opacity: 0; }
+}
+
+@keyframes wool-pattern-flip-in {
+    from { transform: scaleX(0); opacity: 0; }
+}
+
+.wool-pattern-bg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* d-heart.png 안쪽 8x8 칸(테두리 약 4.5%)에 맞춘 클릭 영역 */
+.wool-pattern-grid {
+    position: absolute;
+    inset: 4.5%;
+    display: grid;
+    grid-template: repeat(8, 1fr) / repeat(8, 1fr);
+    touch-action: none; /* 터치 드래그가 스크롤로 먹히지 않게 */
+    user-select: none;
+}
+
+.wool-pattern-cell {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+}
+
+.wool-pattern-cell img {
+    display: block;
+    pointer-events: none; /* 이미지 기본 드래그가 포인터 이벤트를 끊지 않게 */
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    animation: wool-fill 0.2s ease-out;
+}
+
+/* 칸이 채워질 때 작게 커지며 나타난다 */
+@keyframes wool-fill {
+    from { transform: scale(0.4); opacity: 0; }
+}
+
+.wool-panel-change,
+.wool-panel-deliver {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    box-sizing: border-box;
+    width: min(100%, 360px);
+    height: 48px;
+    border-radius: 12px;
+    font: inherit;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.wool-panel-change {
+    border: 2px solid var(--color-brown-dark);
+    background: var(--color-peach);
+    color: var(--color-brown-stroke);
+    font-weight: 500;
+}
+
+.wool-panel-deliver {
+    border: 0;
+    background: var(--color-coral);
+    color: #fff;
+    font-weight: 700;
+}
+
+/* 도안 완성: 칸이 대각선 순서로 물결치듯 튄다 */
+.wool-pattern.is-complete .wool-pattern-cell {
+    animation: wool-wave 0.4s ease-out both;
+    animation-delay: calc(var(--wave-order) * 40ms);
+}
+
+@keyframes wool-wave {
+    50% { transform: scale(1.14); }
+}
+
+.wool-panel-deliver:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* 활성화되면(도안 완성) 물결이 끝난 뒤 한 번 통통 튄다 */
+.wool-panel-deliver:not(:disabled) {
+    animation: wool-pop 0.5s ease-out 0.7s both;
+}
+
+@keyframes wool-pop {
+    40% { transform: scale(1.08); }
+    70% { transform: scale(0.97); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .wool-pattern.is-flip-out,
+    .wool-pattern.is-flip-in { animation: none; }
+    .wool-pattern.is-complete .wool-pattern-cell,
+    .wool-pattern-cell img,
+    .wool-panel-deliver:not(:disabled) {
+        animation: none;
+    }
+}
+
+/* 도안 전달 후 대기실 아래쪽에 5초간 뜨는 안내 */
+.wool-tok-toast {
+    position: absolute;
+    bottom: clamp(72px, 9cqw, 110px); /* 하단 액션 바 위 */
+    left: 0;
+    right: 0;
+    z-index: 6;
+    box-sizing: border-box;
+    width: min(96%, 900px);
+    margin: 0 auto; /* translate로 가운데 정렬하면 opacity 애니메이션과 겹쳐 잔상이 생긴다 */
+    padding: 10px 20px;
+    border-radius: 8px;
+    background: #333333;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 500;
+    text-align: center;
+    animation: wool-toast 5s ease both;
+}
+
+@keyframes wool-toast {
+    0%, 100% { opacity: 0; }
+    6%, 94% { opacity: 1; }
+}
+
+/* 모바일(세로·가로)에서는 글자와 여백을 줄인다 */
+@media (max-width: 640px), (max-height: 500px) {
+    .wool-tok-toast {
+        width: min(94%, 900px);
+        padding: 8px 12px;
+        font-size: 12px;
+        line-height: 1.4;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .wool-tok-toast { animation: none; }
+}
+
+/* 열차가 지나갈 때 뜨는 몽실 역장 안내 패널: 하단 액션 바 위에 놓는다 (패널 모양은 finish-waiting.css의 대화 패널을 그대로 쓴다) */
+.waiting-room-train-chat {
+    --finish-waiting-panel-width: 760px;
+
+    position: absolute;
+    bottom: clamp(16px, 2cqw, 28px);
+    left: 0;
+    right: 0;
+    z-index: 5;
+}
+
+.waiting-room-train-chat .finish-waiting-panel {
+    margin-bottom: 0;
+}
+
+/* 모바일 가로: 대화창이 화면을 가리지 않게 폭(높이 기준)과 글자를 줄인다 */
+@media (orientation: landscape) and (max-height: 500px) {
+    .waiting-room-train-chat {
+        --finish-waiting-panel-width: 110vh;
+    }
+
+    .waiting-room-train-chat .finish-waiting-message {
+        font-size: 2.4vh;
+    }
+}
+
+.wool-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-md);
+}
+
+.wool-panel-heading {
+    text-align: left;
+}
+
+.wool-panel-title {
+    margin: 0;
+    color: var(--color-brown-title);
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.wool-panel-desc {
+    margin: 4px 0 0;
+    color: var(--color-brown-text);
+    font-size: 16px;
+    font-weight: 400;
+}
+
+.wool-panel-actions {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.wool-panel-count {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-sizing: border-box;
+    width: 156px;
+    height: 43px;
+    padding-left: 14px;
+    background: url('/assets/wool/wool-count-btn.png') center / 100% 100% no-repeat;
+    color: var(--color-brown-stroke);
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.wool-panel-count-text {
+    flex: 1;
+    padding-right: 14px; /* 왼쪽 패딩과 맞춰 버튼 안에서 가운데로 */
+    text-align: center;
+}
+
+.wool-panel-exit {
+    width: 41px;
+    height: 40px;
+    padding: 0;
+    border: 0;
+    background: url('/assets/common/exit-btn.png') center / 100% 100% no-repeat;
+    color: var(--color-brown-stroke);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+/* 모바일: 3:2 비율로는 내용이 안 들어가므로 세로로 긴 패널로 바꾼다. 늘어나도 테두리가 안 찌그러지게 border-image(9-slice)를 쓴다. */
+@media (max-width: 640px) {
+    .wool-panel {
+        width: 94vw;
+        height: min(86svh, 680px);
+        aspect-ratio: auto;
+        padding: 28px 20px;
+        overflow-y: auto;
+        border: 36px solid transparent;
+        border-image: url('/assets/common/panel-long.png') 450 fill / 36px stretch;
+        background: none;
+    }
+
+    .wool-panel-header {
+        flex-direction: column-reverse; /* 버튼이 위, 제목이 아래 */
+        gap: var(--space-sm);
+    }
+
+    .wool-panel-actions {
+        justify-content: flex-end;
+    }
+
+    .wool-panel-desc {
+        font-size: 14px;
+    }
+
+    .wool-pattern {
+        flex: none;
+        width: min(100%, 48svh);
+        margin-top: 0;
+    }
+
+    .wool-panel-body {
+        flex: none;
+        translate: none;
+        margin-top: var(--space-sm);
+    }
+}
+
+/* 모바일 가로: 패널은 왼쪽(제목·버튼), 도안은 패널 밖 오른쪽에 띄운다. header/actions/body는 display: contents로 풀어 한 열로 쌓는다. */
+@media (orientation: landscape) and (max-height: 500px) {
+    .wool-panel-backdrop {
+        --pattern-size: 84cqh;
+        grid-template-rows: 100%; /* 패널 height %가 stage 높이 기준이 되게 */
+        container-type: size; /* 도안 크기를 stage 높이(cqh) 기준으로 */
+    }
+
+    .wool-panel {
+        position: relative;
+        translate: calc(-0.5 * (var(--pattern-size) + var(--space-sm)) - 6px); /* 패널+도안 묶음을 가운데로 */
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        width: min(44vw, 300px);
+        height: 92%; /* 화면(stage) 높이 기준이라 밖으로 안 나간다 */
+        aspect-ratio: auto;
+        background: none;
+        border-style: solid;
+        border-color: transparent;
+        border-image: url('/assets/common/panel-long.png') 450 fill / 24px stretch;
+        padding: 8px 12px;
+        overflow: visible; /* 도안이 패널 밖으로 나가야 한다 */
+        border-width: 24px;
+    }
+
+    .wool-panel-header,
+    .wool-panel-actions,
+    .wool-panel-body {
+        display: contents;
+    }
+
+    /* 높이가 모자라도 버튼·글자가 찌그러지지 않게 */
+    .wool-panel > *,
+    .wool-panel-heading,
+    .wool-panel-count,
+    .wool-panel-change,
+    .wool-panel-deliver {
+        flex-shrink: 0;
+    }
+
+    .wool-panel-heading {
+        padding-right: 30px; /* X 버튼 자리 */
+    }
+
+    .wool-panel-title {
+        font-size: 18px;
+    }
+
+    .wool-panel-desc {
+        font-size: 12px;
+    }
+
+    .wool-panel-count {
+        width: 120px;
+        height: 33px;
+        padding-left: 10px;
+        font-size: 12px;
+    }
+
+    .wool-panel-count img {
+        width: 16px;
+    }
+
+    .wool-panel-count-text {
+        padding-right: 10px;
+    }
+
+    .wool-panel-change,
+    .wool-panel-deliver {
+        width: 100%;
+        height: 38px;
+        font-size: 13px;
+    }
+
+    .wool-panel-deliver {
+        margin-top: auto;
+    }
+
+    .wool-panel-exit {
+        position: absolute;
+        top: 4px;
+        right: 8px;
+        width: 32px;
+        height: 31px;
+        font-size: 13px;
+    }
+
+    /* 패널 바깥 오른쪽, 세로 가운데 */
+    .wool-pattern {
+        position: absolute;
+        top: 50%;
+        left: calc(100% + 24px + var(--space-sm));
+        translate: 0 -50%;
+        width: var(--pattern-size);
+        height: var(--pattern-size);
+        margin: 0;
+    }
+}
+
+.waiting-room-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.waiting-room-overlay > * {
+    pointer-events: auto;
+    translate: 0 var(--room-pan-y, 0px); /* 배경 스크롤을 따라 같이 움직임 */
+}
+
+@container waiting-stage (max-width: 1200px) {
+    .waiting-room-overlay {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 10px;
+        box-sizing: border-box;
+    }
+
+    .waiting-room-top,
+    .waiting-room-marquee {
+        position: relative;
+        top: auto;
+        right: auto;
+        left: auto;
+        flex: 0 0 auto;
+        transform: none;
+    }
+
+    .waiting-room-top {
+        z-index: 2;
+        width: 68%;
+        max-width: 320px;
+    }
+
+    .waiting-room-marquee {
+        z-index: 1;
+        width: 84%;
+        max-width: 400px;
+    }
+}
+
+@media (max-width: 1200px) {
+    .waiting-room .waiting-room-overlay {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 10px;
+        box-sizing: border-box;
+    }
+
+    .waiting-room .waiting-room-top,
+    .waiting-room .waiting-room-marquee {
+        position: relative;
+        top: auto;
+        right: auto;
+        left: auto;
+        flex: 0 0 auto;
+        transform: none;
+    }
+
+    .waiting-room .waiting-room-top {
+        width: 70%;
+        max-width: 356px;
+    }
+
+    .waiting-room .waiting-room-marquee {
+        width: 84%;
+        max-width: 400px;
+    }
+
+    /* 아이콘과 글자 사이 간격 = 전광판 왼쪽 끝에서 아이콘까지의 여백(전광판 너비의 6%)의 절반 */
+    .waiting-room .waiting-room-marquee-message-wrap {
+        gap: min(2.52cqw, 12px);
+    }
+}
+
+@media (max-width: 900px) {
+    .waiting-room .waiting-room-overlay {
+        gap: 12px;
+        padding: 6px 8px;
+    }
+
+    .waiting-room .waiting-room-top {
+        width: 74%;
+        max-width: 336px;
+    }
+
+    .waiting-room .waiting-room-marquee {
+        width: 88%;
+        max-width: 360px;
+    }
+
+    .waiting-room .waiting-room-marquee-message-wrap {
+        gap: min(2.64cqw, 10.8px);
+    }
+
+    .waiting-room .waiting-room-top-copy h1 {
+        font-size: 13px;
+    }
+
+    .waiting-room .waiting-room-top-copy p {
+        font-size: 9px;
+    }
+
+    .waiting-room .waiting-room-marquee-message {
+        font-size: 10px;
+    }
+
+    .waiting-room .waiting-room-marquee-stats-label {
+        font-size: 9px;
+    }
+
+    .waiting-room .waiting-room-marquee-stats-value {
+        font-size: 10px;
+    }
+
+    .waiting-room .waiting-room-marquee-train-icon {
+        width: 12px;
+        height: 12px;
+        min-width: 12px;
+        min-height: 12px;
+    }
+
+    .waiting-room .waiting-room-train-pill {
+        width: 128px;
+        min-width: 128px;
+        max-width: 46%;
+    }
+
+    /* 알약이 작아지는 만큼 글자 비율을 키워 읽히게 한다 (두 자리 숫자까지 한 줄에 들어간다) */
+    .waiting-room .waiting-room-train-pill-text {
+        font-size: 8.2cqw;
+    }
+
+    .waiting-room .waiting-room-broadcast img,
+    .waiting-room .waiting-room-end img {
+        width: 96px;
+        min-width: 96px;
+        max-width: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .waiting-room .waiting-room-overlay {
+        gap: 10px;
+    }
+
+    .waiting-room .waiting-room-top {
+        width: 66%;
+        max-width: 284px;
+    }
+
+    .waiting-room .waiting-room-marquee {
+        width: 80%;
+        max-width: 300px;
+    }
+
+    .waiting-room .waiting-room-marquee-message-wrap {
+        gap: min(2.4cqw, 9px);
+    }
+
+    .waiting-room .waiting-room-actions {
+        gap: 4px;
+        padding: 0 8px;
+        bottom: 8px;
+    }
+
+    .waiting-room .waiting-room-marquee-message {
+        font-size: 9px;
+    }
+
+    /* 좁은 상단바에서 방 이름·설명이 틀을 넘지 않게 글자를 줄인다 */
+    .waiting-room .waiting-room-top-copy h1 {
+        font-size: 11px;
+    }
+
+    .waiting-room .waiting-room-top-copy p {
+        font-size: 7px;
+    }
+
+    /* 좁은 상단바에서 '현재 대기 N명'이 칸을 넘지 않게 한다 */
+    .waiting-room .waiting-room-top-waiting {
+        font-size: 11px;
+    }
+
+    .waiting-room .waiting-room-marquee-stats-label {
+        font-size: 8px;
+    }
+
+    .waiting-room .waiting-room-marquee-stats-value {
+        font-size: 9px;
+    }
+
+    .waiting-room .waiting-room-train-pill {
+        width: 120px;
+        min-width: 120px;
+    }
+
+    .waiting-room .waiting-room-broadcast img,
+    .waiting-room .waiting-room-end img {
+        width: 82px;
+        min-width: 82px;
+    }
+}
+
+/* 가로로 누운 폰처럼 높이가 낮을 때: 두 패널을 한 줄에 나란히 두어 방을 덜 가린다. */
+@container waiting-stage (max-height: 520px) {
+    .waiting-room .waiting-room-overlay {
+        flex-direction: row;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 8px;
+        padding-top: 16px; /* 헤더에 붙지 않게 띄운다 */
+    }
+
+    .waiting-room .waiting-room-top {
+        width: 26%;
+        max-width: 228px;
+    }
+
+    .waiting-room .waiting-room-marquee {
+        position: absolute;
+        top: 16px;
+        left: 50%;
+        width: 36%;
+        max-width: 310px;
+        transform: translateX(-50%);
+    }
+
+    .waiting-room .waiting-room-marquee-message-wrap {
+        gap: min(1.08cqw, 9.3px);
+    }
+
+    .waiting-room .waiting-room-marquee-message {
+        font-size: 9px;
+    }
+
+    .waiting-room .waiting-room-marquee-stats-label {
+        font-size: 8px;
+    }
+
+    .waiting-room .waiting-room-marquee-stats-value {
+        font-size: 9px;
+    }
+
+    .waiting-room .waiting-room-marquee-live {
+        font-size: 10px;
+    }
+
+    .waiting-room .waiting-room-top-waiting {
+        font-size: 9px;
+    }
+
+    /* 가로 모바일에서는 누르기 쉽게 방송·마치기 버튼을 조금 키운다 */
+    .waiting-room .waiting-room-broadcast img,
+    .waiting-room .waiting-room-end img {
+        width: 118px;
+        min-width: 118px;
+    }
+
+    /* 상단바가 작아지는 만큼 방 이름·설명도 줄인다 */
+    .waiting-room .waiting-room-top-copy h1 {
+        font-size: 10px;
+    }
+
+    .waiting-room .waiting-room-top-copy p {
+        font-size: 7px;
+    }
+}
+
+/* 가로 모바일: 헤더를 화면 위에 띄우고, 아래로 스크롤하면 위로 밀려 올라가 숨긴다. */
+@media (max-height: 520px) {
+    .waiting-room {
+        --waiting-header-h: 46px;
+        position: relative;
+    }
+
+    .waiting-room .app-header {
+        position: absolute;
+        top: 0;
+        left: 0;
+        transition: transform 0.3s ease;
+    }
+
+    .waiting-room.waiting-room-header-hidden .app-header {
+        transform: translateY(-100%);
+    }
+
+    .waiting-room .waiting-room-stage {
+        position: absolute;
+        inset: 0;
+    }
+
+    .waiting-room .waiting-room-overlay {
+        padding-top: calc(var(--waiting-header-h) + 8px);
+    }
+
+    /* 스크롤로 올라가다 화면 위에 남는 패널 끝부분이 보이지 않게 헤더와 함께 사라진다. */
+    .waiting-room .waiting-room-overlay > * {
+        transition: opacity 0.3s ease;
+    }
+
+    .waiting-room.waiting-room-header-hidden .waiting-room-overlay > * {
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .waiting-room .waiting-room-marquee {
+        top: calc(var(--waiting-header-h) + 8px);
+    }
+}
+
+.waiting-room-top {
+    position: absolute;
+    z-index: 2;
+    top: 0.9cqw;
+    left: 1.1cqw;
+    width: 24cqw;
+    max-width: 320px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    aspect-ratio: 1288 / 320;
+}
+
+.waiting-room-top-frame {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+}
+
+.waiting-room-top-copy {
+    position: absolute;
+    top: 50%;
+    left: 5.5%;
+    width: 54%;
+    min-width: 0;
+    transform: translateY(-50%);
+}
+
+.waiting-room-top-copy h1 {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    font-size: clamp(11px, 1.05cqw, 17px);
+    font-weight: 700;
+    line-height: 1.22;
+    color: var(--color-ink);
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    word-break: keep-all;
+}
+
+.waiting-room-top-copy p {
+    margin: 0.1cqw 0 0;
+    word-break: keep-all; /* 방 설명이 상단바 밖으로 벗어나지 않게 칸 안에서 줄바꿈 */
+    overflow-wrap: anywhere;
+    font-size: 0.68cqw;
+    line-height: 1.25;
+    color: var(--color-brown-text);
+}
+
+.waiting-room-top-waiting {
+    position: absolute;
+    top: 50%;
+    right: 4.5%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35cqw;
+    width: 34%;
+    margin: 0;
+    padding: 0 0.15cqw 0 1.2cqw;
+    border: 0;
+    background: transparent;
+    font-size: 13px;
+    font-weight: 500;
+    color: #333333;
+    white-space: nowrap;
+    transform: translateY(-50%);
+}
+
+.waiting-room-marquee {
+    position: absolute;
+    z-index: 1;
+    top: 1cqw;
+    left: 50%;
+    width: 48cqw;
+    max-width: 620px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    transform: translateX(-50%) scale(0.82);
+    transform-origin: top center;
+    aspect-ratio: 2025 / 407;
+}
+
+.waiting-room-marquee-frame {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: fill;
+    pointer-events: none;
+}
+
+.waiting-room-marquee-body {
+    position: absolute;
+    top: 10%;
+    right: 6%;
+    bottom: 35%;
+    left: 6%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.2cqw;
+}
+
+.waiting-room-marquee-message-wrap {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    /* 아이콘과 글자 사이 간격 = 전광판 왼쪽 끝에서 아이콘까지의 여백(전광판 너비 min(48cqw, 620px)의 6%)의 절반 */
+    gap: min(1.44cqw, 18.6px);
+    min-width: 0;
+    max-width: 62%;
+}
+
+.waiting-room-marquee-train-icon {
+    flex-shrink: 0;
+    width: 1.65cqw;
+    height: 1.65cqw;
+    min-width: 14px;
+    min-height: 14px;
+    background: url('/assets/ui/waiting-room/icon_train.png') center / contain no-repeat;
+}
+
+.waiting-room-marquee-message {
+    margin: 0;
+    font-size: 0.88cqw;
+    font-weight: 600;
+    line-height: 1.32;
+    color: #f7efe3;
+    white-space: nowrap;
+}
+
+.waiting-room-marquee-stats {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    gap: 0.2cqw;
+    align-items: flex-end;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+.waiting-room-marquee-stats p {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    gap: 0.35em;
+    align-items: baseline;
+    justify-content: flex-end;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    color: #f7efe3;
+    white-space: nowrap;
+}
+
+.waiting-room-marquee-stats-label {
+    font-size: 0.68cqw;
+    font-weight: 500;
+    opacity: 0.92;
+}
+
+.waiting-room-marquee-stats-value {
+    font-size: 0.88cqw;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.waiting-room-marquee-live {
+    position: absolute;
+    right: 6%;
+    bottom: 10.3%;
+    left: 6%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 24.6%;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    color: #66241c;
+}
+
+.waiting-room-marquee-live-dots {
+    display: inline-flex;
+    gap: 0.22cqw;
+}
+
+.waiting-room-marquee-live-dots span {
+    width: 0.35cqw;
+    height: 0.35cqw;
+    min-width: 4px;
+    min-height: 4px;
+    border-radius: 50%;
+    background: #66241c;
+    animation: waiting-room-pulse 1.2s ease-in-out infinite;
+}
+
+.waiting-room-marquee-live-dots span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.waiting-room-marquee-live-dots span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes waiting-room-pulse {
+    0%,
+    100% {
+        opacity: 0.45;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+.waiting-room-actions {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 1.2cqw;
+    z-index: 4;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 0.6cqw;
+    padding: 0 1.4cqw;
+    background: none;
+    pointer-events: none;
+}
+
+.waiting-room-actions > * {
+    pointer-events: auto;
+}
+
+.waiting-room-train-pill {
+    position: relative;
+    width: 18cqw;
+    max-width: 220px;
+    min-width: 148px;
+    margin: 0;
+    aspect-ratio: 848 / 216;
+    container-type: inline-size;
+}
+
+.waiting-room-train-pill-bg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+}
+
+/* 아이콘 오른쪽의 '지나간 열차 N대'. 글자 크기는 알약 너비에 비례해 줄어들고 늘어난다. */
+.waiting-room-train-pill-text {
+    position: absolute;
+    top: 50%;
+    /* 아이콘 오른쪽 끝(25.5%)부터 알약 안쪽 테두리(96.7%)까지의 가운데에 놓아, 글자 양옆 여백이 같게 한다 */
+    left: 24%;
+    right: 4.8%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 6.8cqw;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--color-brown-stroke);
+    white-space: nowrap;
+    transform: translateY(-50%);
+}
+
+.waiting-room-action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6cqw;
+    justify-content: flex-end;
+}
+
+.waiting-room-broadcast,
+.waiting-room-end {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+}
+
+.waiting-room-broadcast:disabled {
+    cursor: not-allowed;
+    opacity: 0.72;
+}
+
+.waiting-room-broadcast {
+    position: relative;
+}
+
+/* 쿨타임 중에는 꺼진 버튼 이미지 위에 남은 시간을 가운데로 올린다 */
+.waiting-room-broadcast:disabled:has(.waiting-room-broadcast-cooldown) {
+    opacity: 1;
+}
+
+.waiting-room-broadcast-cooldown {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding-left: 8%; /* 글자를 살짝 오른쪽으로 */
+    font-size: clamp(10px, 1.2cqw, 14px);
+    font-weight: 700;
+    color: #fff;
+    white-space: nowrap;
+}
+
+/* 꺼진 버튼 이미지(220x53)는 켜진 버튼과 비율이 달라 더 넓게, 자기 비율대로 그린다 */
+.waiting-room-broadcast img.is-off {
+    width: 18cqw;
+    max-width: 210px;
+    min-width: 150px;
+    aspect-ratio: 220 / 53;
+}
+
+/* 모바일(세로·가로): 꺼진 버튼 폭을 조금 줄인다 */
+@media (max-width: 640px), (max-height: 500px) {
+    .waiting-room-broadcast img.is-off {
+        width: 15cqw;
+        min-width: 120px;
+    }
+}
+
+.waiting-room-broadcast img,
+.waiting-room-end img {
+    display: block;
+    width: 13cqw;
+    max-width: 150px;
+    min-width: 96px;
+    aspect-ratio: 680 / 216; /* 두 버튼 이미지 비율이 달라서(680/640) 같은 크기로 맞춘다 */
+    height: auto;
+    object-fit: fill;
+}
+
+#game-container {
+    width: 100%;
+    height: calc(100vh - 148px);
 }
 
 #app {
@@ -31,33 +2215,60 @@ main h1 {
 }
 
 .spritePosition {
-    margin: 10px 0 0 10px;
+    margin: var(--space-sm) 0 0 var(--space-sm);
     font-size: 0.8em;
 }
 
 .button {
     width: 140px;
-    margin: 10px;
-    padding: 10px;
-    background-color: #000000;
-    color: rgba(255, 255, 255, 0.87);
-    border: 1px solid rgba(255, 255, 255, 0.87);
+    margin: var(--space-sm);
+    padding: var(--space-sm);
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    border: 1px solid var(--color-text);
     cursor: pointer;
     transition: all 0.3s;
 
     &:hover {
-        border: 1px solid #0ec3c9;
-        color: #0ec3c9;
+        border: 1px solid var(--color-accent);
+        color: var(--color-accent);
     }
 
     &:active {
-        background-color: #0ec3c9;
+        background-color: var(--color-accent);
     }
 
     /* Disabled styles */
     &:disabled {
         cursor: not-allowed;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        color: rgba(255, 255, 255, 0.3);
+        border: 1px solid var(--color-text-muted);
+        color: var(--color-text-muted);
     }
+}
+
+/* 대기실 첫 진입: 현재 대기 → 안내방송 전광판 → 지나간 열차 → 버튼 순으로 톡 떠오른다.
+   (배치용 translate/transform과 겹치지 않게 scale·opacity만 쓴다) */
+.waiting-room-top,
+.waiting-room-marquee,
+.waiting-room-train-pill,
+.waiting-room-broadcast,
+.waiting-room-end {
+    animation: waiting-room-pop-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+}
+
+.waiting-room-marquee { animation-delay: 0.15s; }
+.waiting-room-train-pill { animation-delay: 0.3s; }
+.waiting-room-broadcast { animation-delay: 0.45s; }
+.waiting-room-end { animation-delay: 0.6s; }
+
+@keyframes waiting-room-pop-in {
+    from { opacity: 0; scale: 0.8; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .waiting-room-top,
+    .waiting-room-marquee,
+    .waiting-room-train-pill,
+    .waiting-room-broadcast,
+    .waiting-room-end { animation: none; }
 }

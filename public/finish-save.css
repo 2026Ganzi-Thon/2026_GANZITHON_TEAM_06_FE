@@ -1,0 +1,413 @@
+/* 담요 조각 저장 화면 전용 스타일 (/finish-waiting/save)
+ * 색·간격 변수(:root)는 style.css 에 있으므로 style.css 다음에 불러온다. */
+
+.finish-save-panel {
+    --finish-save-btn-color: #ff6e52;
+    --finish-save-later-fill: #fadfc0;
+    --finish-save-later-stroke: #59433a;
+
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 560px;
+    height: 520px;
+    max-width: 100vw;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-md);
+    background: url('/assets/common/panel-short.png') center / 100% 100% no-repeat;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #e1a583 transparent;
+}
+
+/* 내용이 패널보다 길면 줄어들지 않고 스크롤되게 한다 */
+.finish-save-panel > * {
+    flex-shrink: 0;
+}
+
+.finish-save-title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--color-brown-stroke);
+}
+
+.finish-save-desc {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 400;
+    color: var(--color-brown-stroke);
+}
+
+.finish-save-gift {
+    width: 130px;
+    height: 137px;
+}
+
+.finish-save-btn {
+    width: 280px;
+    padding: var(--space-md) 0;
+    border-radius: 12px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.finish-save-btn-primary {
+    border: 0;
+    background: var(--finish-save-btn-color);
+    font-weight: 700;
+    color: #fff;
+}
+
+.finish-save-btn-start {
+    background: #ff674c;
+}
+
+.finish-save-divider {
+    width: 300px;
+    margin: 0;
+    border: 0;
+    border-top: 2px solid #E1A583;
+}
+
+.finish-save-btn-later {
+    border: 1px solid var(--finish-save-later-stroke);
+    background: var(--finish-save-later-fill);
+    color: var(--color-brown-stroke);
+}
+
+/* 로그인 완료 화면: 버튼·구분선 너비는 로그인 input칸(400x40)과 같게 */
+.finish-save-panel-done {
+    justify-content: flex-start;
+    padding: 24px 0;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+/* 위쪽 여백은 기존과 같게(패널 24px + 스크롤 영역 40px = 64px) */
+.finish-save-panel-done .finish-save-scroll {
+    gap: var(--space-md);
+    padding-top: 40px;
+}
+
+.finish-save-panel-done .finish-save-btn {
+    width: 400px;
+    height: 40px;
+    padding: 0;
+}
+
+.finish-save-panel-done .finish-save-divider {
+    width: 400px;
+}
+
+/* 마무리 화면 ('아니요' 클릭 후) */
+.finish-save-panel-end .finish-save-title {
+    text-align: center;
+}
+
+.finish-save-panel-end .finish-save-btn {
+    width: 400px;
+    height: 40px;
+    padding: 0;
+}
+
+/* 간이 로그인 (저장할래요 클릭 후) */
+.finish-save-panel-login {
+    --finish-save-brown: #6d4344;
+    --finish-save-active: #ff674c;
+    --finish-save-inactive: #fee5cd;
+    --finish-save-field-width: 400px;
+
+    /* 패널은 틀(고정), 안쪽 .finish-save-scroll 만 스크롤 → 내용이 위쪽 여백에서 살짝 잘린다 */
+    justify-content: flex-start;
+    padding: 24px 0 48px;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.finish-save-scroll {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-sm);
+    padding-top: 8px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #e1a583 transparent;
+}
+
+.finish-save-scroll > * {
+    flex-shrink: 0;
+}
+
+.finish-save-panel-login .finish-save-title,
+.finish-save-panel-login .finish-save-desc {
+    color: var(--finish-save-brown);
+}
+
+.finish-save-tabs {
+    display: flex;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+}
+
+.finish-save-tab {
+    width: 200px;
+    height: 40px;
+    border: 1px solid var(--finish-save-brown);
+    border-radius: 10px;
+    background: var(--finish-save-inactive);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--finish-save-brown);
+    cursor: pointer;
+}
+
+.finish-save-tab.is-active {
+    border-color: var(--finish-save-active);
+    background: var(--finish-save-active);
+    color: #fff;
+}
+
+.finish-save-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: var(--finish-save-field-width);
+}
+
+.finish-save-field-title {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--finish-save-brown);
+}
+
+.finish-save-input-wrap {
+    position: relative;
+    display: block;
+}
+
+.finish-save-input {
+    width: 100%;
+    height: 40px;
+    padding: 0 var(--space-md);
+    box-sizing: border-box;
+    border: 1px solid var(--finish-save-brown);
+    border-radius: 8px;
+    background: var(--finish-save-inactive);
+    font-size: 14px;
+    color: var(--finish-save-brown);
+}
+
+.finish-save-count {
+    position: absolute;
+    top: 50%;
+    right: var(--space-md);
+    transform: translateY(-50%);
+    font-size: 12px;
+    color: var(--finish-save-brown);
+}
+
+.finish-save-input-wrap .finish-save-input {
+    padding-right: 56px;
+}
+
+.finish-save-warning {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    align-self: flex-start;
+    width: var(--finish-save-field-width);
+    margin: 0 auto;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--finish-save-brown);
+}
+
+.finish-save-warning-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    box-sizing: border-box;
+    border: 1px solid var(--finish-save-brown);
+    border-radius: 50%;
+    font-size: 11px;
+    line-height: 1;
+}
+
+.finish-save-submit {
+    /* 모드(가입하기/로그인)가 바뀌어도 위치가 같도록 패널 아래로 밀어 둔다 */
+    margin-top: auto;
+    width: var(--finish-save-field-width);
+    height: 50px;
+    border: 0;
+    border-radius: 12px;
+    background: #ff6e52;
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+    cursor: pointer;
+}
+
+/* 모바일: 패널(비율 유지)과 내용을 줄여 화면 폭에 맞춘다 */
+@media (max-width: 768px) {
+    /* 패널 이미지 비율(706:650)을 유지하고, 좁은 화면에서는 뷰포트 폭에 맞춘다 */
+    .finish-save-panel {
+        width: min(300px, calc(100vw - 24px));
+        height: auto;
+        aspect-ratio: 706 / 650;
+        gap: var(--space-sm);
+    }
+
+    .finish-save-title {
+        font-size: 14px;
+    }
+
+    .finish-save-desc {
+        font-size: 11px;
+    }
+
+    .finish-save-gift {
+        width: 60px;
+        height: 63px;
+    }
+
+    .finish-save-btn {
+        width: 160px;
+        padding: 8px 0;
+        font-size: 12px;
+    }
+
+    /* 로그인·완료·마무리 화면은 내용이 많아 패널을 더 키운다 */
+    .finish-save-panel-login,
+    .finish-save-panel-done,
+    .finish-save-panel-end {
+        --finish-save-field-width: min(240px, calc(100vw - 80px));
+
+        width: min(340px, calc(100vw - 24px));
+        height: min(400px, calc(100dvh - 24px));
+        aspect-ratio: auto;
+    }
+
+    .finish-save-panel-done {
+        padding: 18px 0;
+    }
+
+    .finish-save-panel-done .finish-save-scroll {
+        gap: var(--space-sm);
+        padding-top: 18px;
+    }
+
+    .finish-save-panel-end {
+        gap: var(--space-md);
+    }
+
+    .finish-save-panel-done .finish-save-btn,
+    .finish-save-panel-end .finish-save-btn,
+    .finish-save-panel-done .finish-save-divider {
+        width: var(--finish-save-field-width);
+    }
+
+    .finish-save-panel-done .finish-save-btn,
+    .finish-save-panel-end .finish-save-btn {
+        height: 36px;
+    }
+
+    .finish-save-panel-login {
+        padding: 18px 0 22px;
+    }
+
+    .finish-save-scroll {
+        gap: 6px;
+        padding-top: 4px;
+    }
+
+    .finish-save-field {
+        gap: 3px;
+    }
+
+    .finish-save-field-title {
+        font-size: 11px;
+    }
+
+    .finish-save-panel-login .finish-save-title {
+        font-size: 16px;
+    }
+
+    .finish-save-panel-login .finish-save-desc {
+        font-size: 11px;
+    }
+
+    .finish-save-tabs {
+        gap: 6px;
+        margin-bottom: 4px;
+    }
+
+    .finish-save-tab {
+        width: calc((var(--finish-save-field-width) - 6px) / 2);
+        height: 32px;
+        font-size: 12px;
+    }
+
+    .finish-save-input {
+        height: 32px;
+        font-size: 12px;
+    }
+
+    .finish-save-count {
+        font-size: 11px;
+    }
+
+    .finish-save-warning {
+        font-size: 10px;
+    }
+
+    .finish-save-submit {
+        height: 40px;
+        font-size: 13px;
+    }
+}
+
+/* 가입/로그인 완료 팝업 */
+.finish-save-popup-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.finish-save-popup {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-md);
+    padding: 32px 40px;
+    border: 1px solid var(--finish-save-later-stroke);
+    border-radius: 16px;
+    background: var(--color-cream);
+}
+
+.finish-save-popup-text {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--color-brown-title);
+}
+
+.finish-save-popup-btn {
+    width: 160px;
+    color: var(--color-ink);
+}
