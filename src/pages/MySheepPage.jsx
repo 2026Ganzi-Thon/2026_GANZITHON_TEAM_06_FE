@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
-import PageLinks from '../components/common/PageLinks';
+import AppHeader from '../components/common/AppHeader';
 import PanelFrame from '../components/common/PanelFrame';
 import { PIECES } from '../data/pieces';
 
@@ -29,6 +29,7 @@ export default function MySheepPage()
 
     return (
         <main className="my-sheep-page">
+            <AppHeader collapseOnDrag showMySheep={false} />
             <PanelFrame
                 actions={isBlanket && (
                     <button type="button" className="my-sheep-logout" onClick={() => setTab('storage')}>
@@ -158,8 +159,6 @@ export default function MySheepPage()
                     )}
                 </div>
             </PanelFrame>
-            <h1>마이 양</h1>
-            <PageLinks />
         </main>
     );
 }

@@ -8,6 +8,9 @@
     --color-brown-text: #78645b;
     --color-brown-stroke: #6d4344;
     --color-cream: #fef3e6;
+    --color-peach: #fadfc0;
+    --color-brown-dark: #59433a;
+    --color-coral: #ff6e52;
     --space-sm: 10px;
     --space-md: 16px;
 }
@@ -84,6 +87,16 @@ main.onboarding-ticket {
     background: var(--color-cream);
 }
 
+/* 드래그하면 접히는 헤더(collapseOnDrag): 위로 밀려 올라가고, 아래 내용이 그 자리를 채운다. */
+.app-header {
+    transition: translate 0.3s ease, margin-bottom 0.3s ease;
+}
+
+.app-header.is-collapsed {
+    translate: 0 -100%;
+    margin-bottom: calc(-1 * var(--app-header-h, 0px));
+}
+
 .app-header-logo {
     width: 44px;
     height: 44px;
@@ -93,8 +106,13 @@ main.onboarding-ticket {
 .app-header-note {
     flex: 1;
     margin: 0;
-    text-align: center;
+    text-align: left;
     font-size: clamp(12px, 1.6vw, 16px);
+}
+
+.app-header-note strong {
+    font-size: 16px;
+    font-weight: 700;
 }
 
 .app-header-actions {
@@ -114,6 +132,23 @@ main.onboarding-ticket {
     display: block;
     height: 40px;
     width: auto;
+}
+
+/* 모바일: 문구가 좁은 칸에서 겹치지 않게 다음 줄로 내린다 */
+@media (max-width: 600px) {
+    .app-header {
+        flex-wrap: wrap;
+        gap: 4px var(--space-sm);
+    }
+
+    .app-header-logo {
+        margin-right: auto;
+    }
+
+    .app-header-note {
+        order: 3;
+        flex: 1 0 100%;
+    }
 }
 
 .safety-panel {
@@ -184,7 +219,7 @@ section.onboarding-status,
     color: #8b2e24;
 }
 
-.onboarding-start,
+section.onboarding-start,
 .ticket-step {
     display: flex;
     flex-direction: column;
@@ -472,7 +507,14 @@ section.onboarding-status,
 }
 
 body:has(main.waiting-room) {
+    position: fixed; /* 모바일에서 드래그로 페이지 전체가 밀리거나 튕기지 않게 */
+    inset: 0;
     overflow: hidden;
+    overscroll-behavior: none;
+}
+
+.waiting-room-stage {
+    touch-action: none; /* 드래그는 Phaser 배경 스크롤에만 쓰고, 패널은 제자리에 둔다 */
 }
 
 .waiting-room {
@@ -483,28 +525,45 @@ body:has(main.waiting-room) {
     max-height: 100dvh;
     overflow: hidden;
     box-sizing: border-box;
-    background: #3d2a24;
+    background: #000;
     color: var(--color-ink);
 }
 
-.waiting-room .app-header {
+.waiting-room .app-header,
+.onboarding .app-header,
+.my-sheep-page .app-header,
+.finish-waiting-page .app-header {
+    position: sticky; /* 스크롤해도 맨 위에 붙어 있게 */
+    top: 0;
+    z-index: 5; /* 아래 요소에 가려지지 않게 */
+    color: var(--color-ink);
     flex: 0 0 auto;
     width: 100%;
     box-sizing: border-box;
     min-height: 0;
     padding: 4px var(--space-md);
+    border-radius: 0 0 var(--space-sm) var(--space-sm);
 }
 
-.waiting-room .app-header-logo {
+.waiting-room .app-header-logo,
+.onboarding .app-header-logo,
+.my-sheep-page .app-header-logo,
+.finish-waiting-page .app-header-logo {
     width: 36px;
     height: 36px;
 }
 
-.waiting-room .app-header-note {
+.waiting-room .app-header-note,
+.onboarding .app-header-note,
+.my-sheep-page .app-header-note,
+.finish-waiting-page .app-header-note {
     font-size: clamp(11px, 1.1vw, 14px);
 }
 
-.waiting-room .app-header-actions img {
+.waiting-room .app-header-actions img,
+.onboarding .app-header-actions img,
+.my-sheep-page .app-header-actions img,
+.finish-waiting-page .app-header-actions img {
     height: 36px;
     width: auto;
 }
@@ -518,7 +577,6 @@ body:has(main.waiting-room) {
     min-height: 0;
     margin: 0;
     border: 0;
-    border-top: 3px solid #8b5a4a;
     border-radius: 0;
     overflow: hidden;
     background: #2f211c;
@@ -541,6 +599,397 @@ body:has(main.waiting-room) {
     height: 100% !important;
 }
 
+.waiting-room-wool-label {
+    position: absolute;
+    z-index: 1;
+    translate: -50% 0;
+    padding: 0.35em 0.6em;
+    border-radius: 0.5em;
+    background: #fff;
+    color: #000;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+/* 털실 톡톡 패널 (panel-long.png는 가장자리가 투명해서 패딩으로 안쪽 여백을 맞춘다) */
+.wool-panel-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 5; /* 하단 액션 바(z-index 4)까지 같이 dim */
+    display: grid;
+    place-items: center;
+    background: rgba(0, 0, 0, 0.5); /* 뒤 배경 dim */
+}
+
+.wool-panel-backdrop[hidden] {
+    display: none;
+}
+
+.wool-panel {
+    box-sizing: border-box;
+    width: min(96vw, 125vh, 1000px); /* 3:2 비율이라 높이 기준으로도 제한 */
+    aspect-ratio: 3 / 2;
+    display: flex;
+    flex-direction: column;
+    padding: 3.8% 6% 5.2%; /* %는 너비 기준 */
+    background: url('/assets/common/panel-long.png') center / 100% 100% no-repeat;
+}
+
+.wool-panel-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-sm);
+    min-height: 0;
+    translate: 0 2%; /* 하트·버튼을 헤더에서 떨어뜨려 아래로 (%는 본문 너비 기준) */
+}
+
+.wool-pattern {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    aspect-ratio: 1;
+    margin-top: -1%; /* 살짝 키움 */
+}
+
+.wool-pattern-bg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* d-heart.png 안쪽 8x8 칸(테두리 약 4.5%)에 맞춘 클릭 영역 */
+.wool-pattern-grid {
+    position: absolute;
+    inset: 4.5%;
+    display: grid;
+    grid-template: repeat(8, 1fr) / repeat(8, 1fr);
+    touch-action: none; /* 터치 드래그가 스크롤로 먹히지 않게 */
+    user-select: none;
+}
+
+.wool-pattern-cell {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+}
+
+.wool-pattern-cell img {
+    display: block;
+    pointer-events: none; /* 이미지 기본 드래그가 포인터 이벤트를 끊지 않게 */
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+}
+
+.wool-panel-change,
+.wool-panel-deliver {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    box-sizing: border-box;
+    width: min(100%, 360px);
+    height: 48px;
+    border-radius: 12px;
+    font: inherit;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.wool-panel-change {
+    border: 2px solid var(--color-brown-dark);
+    background: var(--color-peach);
+    color: var(--color-brown-stroke);
+    font-weight: 500;
+}
+
+.wool-panel-deliver {
+    border: 0;
+    background: var(--color-coral);
+    color: #fff;
+    font-weight: 700;
+}
+
+/* 도안 완성: 칸이 대각선 순서로 물결치듯 튄다 */
+.wool-pattern.is-complete .wool-pattern-cell {
+    animation: wool-wave 0.4s ease-out both;
+    animation-delay: calc(var(--wave-order) * 40ms);
+}
+
+@keyframes wool-wave {
+    50% { transform: scale(1.14); }
+}
+
+.wool-panel-deliver:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* 활성화되면(도안 완성) 물결이 끝난 뒤 한 번 통통 튄다 */
+.wool-panel-deliver:not(:disabled) {
+    animation: wool-pop 0.5s ease-out 0.7s both;
+}
+
+@keyframes wool-pop {
+    40% { transform: scale(1.08); }
+    70% { transform: scale(0.97); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .wool-pattern.is-complete .wool-pattern-cell,
+    .wool-panel-deliver:not(:disabled) {
+        animation: none;
+    }
+}
+
+/* 도안 전달 후 대기실 아래쪽에 5초간 뜨는 안내 */
+.wool-tok-toast {
+    position: absolute;
+    bottom: clamp(72px, 9cqw, 110px); /* 하단 액션 바 위 */
+    left: 0;
+    right: 0;
+    z-index: 6;
+    box-sizing: border-box;
+    width: min(96%, 900px);
+    margin: 0 auto; /* translate로 가운데 정렬하면 opacity 애니메이션과 겹쳐 잔상이 생긴다 */
+    padding: 10px 20px;
+    border-radius: 8px;
+    background: #333333;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 500;
+    text-align: center;
+    animation: wool-toast 5s ease both;
+}
+
+@keyframes wool-toast {
+    0%, 100% { opacity: 0; }
+    6%, 94% { opacity: 1; }
+}
+
+/* 모바일(세로·가로)에서는 글자와 여백을 줄인다 */
+@media (max-width: 640px), (max-height: 500px) {
+    .wool-tok-toast {
+        width: min(94%, 900px);
+        padding: 8px 12px;
+        font-size: 12px;
+        line-height: 1.4;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .wool-tok-toast { animation: none; }
+}
+
+.wool-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-md);
+}
+
+.wool-panel-heading {
+    text-align: left;
+}
+
+.wool-panel-title {
+    margin: 0;
+    color: var(--color-brown-title);
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.wool-panel-desc {
+    margin: 4px 0 0;
+    color: var(--color-brown-text);
+    font-size: 16px;
+    font-weight: 400;
+}
+
+.wool-panel-actions {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.wool-panel-count {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-sizing: border-box;
+    width: 156px;
+    height: 43px;
+    padding-left: 14px;
+    background: url('/assets/wool/wool-count-btn.png') center / 100% 100% no-repeat;
+    color: var(--color-brown-stroke);
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.wool-panel-count-text {
+    flex: 1;
+    padding-right: 14px; /* 왼쪽 패딩과 맞춰 버튼 안에서 가운데로 */
+    text-align: center;
+}
+
+.wool-panel-exit {
+    width: 41px;
+    height: 40px;
+    padding: 0;
+    border: 0;
+    background: url('/assets/common/exit-btn.png') center / 100% 100% no-repeat;
+    color: var(--color-brown-stroke);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+/* 모바일: 3:2 비율로는 내용이 안 들어가므로 세로로 긴 패널로 바꾼다. 늘어나도 테두리가 안 찌그러지게 border-image(9-slice)를 쓴다. */
+@media (max-width: 640px) {
+    .wool-panel {
+        width: 94vw;
+        height: min(86svh, 680px);
+        aspect-ratio: auto;
+        padding: 28px 20px;
+        overflow-y: auto;
+        border: 36px solid transparent;
+        border-image: url('/assets/common/panel-long.png') 450 fill / 36px stretch;
+        background: none;
+    }
+
+    .wool-panel-header {
+        flex-direction: column-reverse; /* 버튼이 위, 제목이 아래 */
+        gap: var(--space-sm);
+    }
+
+    .wool-panel-actions {
+        justify-content: flex-end;
+    }
+
+    .wool-panel-desc {
+        font-size: 14px;
+    }
+
+    .wool-pattern {
+        flex: none;
+        width: min(100%, 48svh);
+        margin-top: 0;
+    }
+
+    .wool-panel-body {
+        flex: none;
+        translate: none;
+        margin-top: var(--space-sm);
+    }
+}
+
+/* 모바일 가로: 패널은 왼쪽(제목·버튼), 도안은 패널 밖 오른쪽에 띄운다. header/actions/body는 display: contents로 풀어 한 열로 쌓는다. */
+@media (orientation: landscape) and (max-height: 500px) {
+    .wool-panel-backdrop {
+        --pattern-size: 84cqh;
+        grid-template-rows: 100%; /* 패널 height %가 stage 높이 기준이 되게 */
+        container-type: size; /* 도안 크기를 stage 높이(cqh) 기준으로 */
+    }
+
+    .wool-panel {
+        position: relative;
+        translate: calc(-0.5 * (var(--pattern-size) + var(--space-sm)) - 6px); /* 패널+도안 묶음을 가운데로 */
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        width: min(44vw, 300px);
+        height: 92%; /* 화면(stage) 높이 기준이라 밖으로 안 나간다 */
+        aspect-ratio: auto;
+        background: none;
+        border-style: solid;
+        border-color: transparent;
+        border-image: url('/assets/common/panel-long.png') 450 fill / 24px stretch;
+        padding: 8px 12px;
+        overflow: visible; /* 도안이 패널 밖으로 나가야 한다 */
+        border-width: 24px;
+    }
+
+    .wool-panel-header,
+    .wool-panel-actions,
+    .wool-panel-body {
+        display: contents;
+    }
+
+    /* 높이가 모자라도 버튼·글자가 찌그러지지 않게 */
+    .wool-panel > *,
+    .wool-panel-heading,
+    .wool-panel-count,
+    .wool-panel-change,
+    .wool-panel-deliver {
+        flex-shrink: 0;
+    }
+
+    .wool-panel-heading {
+        padding-right: 30px; /* X 버튼 자리 */
+    }
+
+    .wool-panel-title {
+        font-size: 18px;
+    }
+
+    .wool-panel-desc {
+        font-size: 12px;
+    }
+
+    .wool-panel-count {
+        width: 120px;
+        height: 33px;
+        padding-left: 10px;
+        font-size: 12px;
+    }
+
+    .wool-panel-count img {
+        width: 16px;
+    }
+
+    .wool-panel-count-text {
+        padding-right: 10px;
+    }
+
+    .wool-panel-change,
+    .wool-panel-deliver {
+        width: 100%;
+        height: 38px;
+        font-size: 13px;
+    }
+
+    .wool-panel-deliver {
+        margin-top: auto;
+    }
+
+    .wool-panel-exit {
+        position: absolute;
+        top: 4px;
+        right: 8px;
+        width: 32px;
+        height: 31px;
+        font-size: 13px;
+    }
+
+    /* 패널 바깥 오른쪽, 세로 가운데 */
+    .wool-pattern {
+        position: absolute;
+        top: 50%;
+        left: calc(100% + 24px + var(--space-sm));
+        translate: 0 -50%;
+        width: var(--pattern-size);
+        height: var(--pattern-size);
+        margin: 0;
+    }
+}
+
 .waiting-room-overlay {
     position: absolute;
     inset: 0;
@@ -550,6 +999,7 @@ body:has(main.waiting-room) {
 
 .waiting-room-overlay > * {
     pointer-events: auto;
+    translate: 0 var(--room-pan-y, 0px); /* 배경 스크롤을 따라 같이 움직임 */
 }
 
 @container waiting-stage (max-width: 1200px) {
@@ -656,10 +1106,6 @@ body:has(main.waiting-room) {
         font-size: 10px;
     }
 
-    .waiting-room .waiting-room-marquee-live {
-        font-size: 9px;
-    }
-
     .waiting-room .waiting-room-marquee-train-icon {
         width: 12px;
         height: 12px;
@@ -674,16 +1120,16 @@ body:has(main.waiting-room) {
     }
 
     .waiting-room .waiting-room-train-pill-value {
-        left: 61%;
+        left: 62.8%; /* 이미지의 '열차'와 '대' 사이 빈칸(약 65~75%) 가운데 */
         width: 16%;
-        font-size: 11px;
+        font-size: 9px;
     }
 
     .waiting-room .waiting-room-broadcast img,
     .waiting-room .waiting-room-end img {
         width: 96px;
-        min-width: 0;
-        max-width: 44%;
+        min-width: 96px;
+        max-width: none;
     }
 }
 
@@ -708,6 +1154,18 @@ body:has(main.waiting-room) {
         bottom: 8px;
     }
 
+    .waiting-room .waiting-room-marquee-message {
+        font-size: 9px;
+    }
+
+    .waiting-room .waiting-room-marquee-stats-label {
+        font-size: 8px;
+    }
+
+    .waiting-room .waiting-room-marquee-stats-value {
+        font-size: 9px;
+    }
+
     .waiting-room .waiting-room-train-pill {
         width: 120px;
         min-width: 120px;
@@ -716,6 +1174,90 @@ body:has(main.waiting-room) {
     .waiting-room .waiting-room-broadcast img,
     .waiting-room .waiting-room-end img {
         width: 82px;
+        min-width: 82px;
+    }
+}
+
+/* 가로로 누운 폰처럼 높이가 낮을 때: 두 패널을 한 줄에 나란히 두어 방을 덜 가린다. */
+@container waiting-stage (max-height: 520px) {
+    .waiting-room .waiting-room-overlay {
+        flex-direction: row;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 8px;
+        padding-top: 16px; /* 헤더에 붙지 않게 띄운다 */
+    }
+
+    .waiting-room .waiting-room-top {
+        width: 30%;
+        max-width: 260px;
+    }
+
+    .waiting-room .waiting-room-marquee {
+        position: absolute;
+        top: 16px;
+        left: 50%;
+        width: 36%;
+        max-width: 310px;
+        transform: translateX(-50%);
+    }
+
+    .waiting-room .waiting-room-marquee-message {
+        font-size: 9px;
+    }
+
+    .waiting-room .waiting-room-marquee-stats-label {
+        font-size: 8px;
+    }
+
+    .waiting-room .waiting-room-marquee-stats-value {
+        font-size: 9px;
+    }
+
+    .waiting-room .waiting-room-marquee-live {
+        font-size: 10px;
+    }
+}
+
+/* 가로 모바일: 헤더를 화면 위에 띄우고, 아래로 스크롤하면 위로 밀려 올라가 숨긴다. */
+@media (max-height: 520px) {
+    .waiting-room {
+        --waiting-header-h: 46px;
+        position: relative;
+    }
+
+    .waiting-room .app-header {
+        position: absolute;
+        top: 0;
+        left: 0;
+        transition: transform 0.3s ease;
+    }
+
+    .waiting-room.waiting-room-header-hidden .app-header {
+        transform: translateY(-100%);
+    }
+
+    .waiting-room .waiting-room-stage {
+        position: absolute;
+        inset: 0;
+    }
+
+    .waiting-room .waiting-room-overlay {
+        padding-top: calc(var(--waiting-header-h) + 8px);
+    }
+
+    /* 스크롤로 올라가다 화면 위에 남는 패널 끝부분이 보이지 않게 헤더와 함께 사라진다. */
+    .waiting-room .waiting-room-overlay > * {
+        transition: opacity 0.3s ease;
+    }
+
+    .waiting-room.waiting-room-header-hidden .waiting-room-overlay > * {
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .waiting-room .waiting-room-marquee {
+        top: calc(var(--waiting-header-h) + 8px);
     }
 }
 
@@ -724,8 +1266,8 @@ body:has(main.waiting-room) {
     z-index: 2;
     top: 0.9cqw;
     left: 1.1cqw;
-    width: 32cqw;
-    max-width: 420px;
+    width: 27cqw;
+    max-width: 360px;
     margin: 0;
     padding: 0;
     border: 0;
@@ -762,6 +1304,7 @@ body:has(main.waiting-room) {
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     word-break: keep-all;
 }
 
@@ -808,7 +1351,8 @@ body:has(main.waiting-room) {
     border: 0;
     background: transparent;
     box-shadow: none;
-    transform: translateX(-50%);
+    transform: translateX(-50%) scale(0.82);
+    transform-origin: top center;
     aspect-ratio: 2025 / 407;
 }
 
@@ -822,10 +1366,10 @@ body:has(main.waiting-room) {
 
 .waiting-room-marquee-body {
     position: absolute;
-    top: 8%;
-    right: 3.5%;
-    bottom: 26%;
-    left: 3.5%;
+    top: 10%;
+    right: 6%;
+    bottom: 35%;
+    left: 6%;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -847,10 +1391,7 @@ body:has(main.waiting-room) {
     height: 1.65cqw;
     min-width: 14px;
     min-height: 14px;
-    border: 0.14cqw solid #e6c4a8;
-    border-radius: 0.28cqw;
-    background: linear-gradient(180deg, #9c4a4a 0%, #7c3a3a 100%);
-    box-shadow: inset 0 -0.12cqw 0 rgb(0 0 0 / 20%);
+    background: url('/assets/ui/waiting-room/icon_train.png') center / contain no-repeat;
 }
 
 .waiting-room-marquee-message {
@@ -859,16 +1400,16 @@ body:has(main.waiting-room) {
     font-weight: 600;
     line-height: 1.32;
     color: #f7efe3;
+    white-space: nowrap;
 }
 
 .waiting-room-marquee-stats {
     display: flex;
+    flex-direction: column;
     flex-shrink: 0;
-    gap: 0;
-    align-items: center;
+    gap: 0.2cqw;
+    align-items: flex-end;
     justify-content: center;
-    width: 28%;
-    min-width: 7cqw;
     margin: 0;
     padding: 0;
     border-radius: 0;
@@ -877,20 +1418,16 @@ body:has(main.waiting-room) {
 
 .waiting-room-marquee-stats p {
     display: flex;
-    flex: 1 1 50%;
+    flex: 0 0 auto;
     flex-wrap: nowrap;
     gap: 0.35em;
     align-items: baseline;
-    justify-content: center;
+    justify-content: flex-end;
     min-width: 0;
     margin: 0;
-    padding: 0 0.4cqw;
+    padding: 0;
     color: #f7efe3;
     white-space: nowrap;
-}
-
-.waiting-room-marquee-stats p + p {
-    border-left: 1px solid rgb(247 239 227 / 28%);
 }
 
 .waiting-room-marquee-stats-label {
@@ -907,19 +1444,20 @@ body:has(main.waiting-room) {
 
 .waiting-room-marquee-live {
     position: absolute;
-    right: 4%;
-    bottom: 5%;
-    left: 4%;
+    right: 6%;
+    bottom: 10.3%;
+    left: 6%;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: 18%;
+    height: 24.6%;
     margin: 0;
-    padding: 0 0.4cqw;
+    padding: 0;
     box-sizing: border-box;
-    font-size: 0.72cqw;
-    font-weight: 600;
-    color: #6a4e43;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    color: #66241c;
 }
 
 .waiting-room-marquee-live-dots {
@@ -933,7 +1471,7 @@ body:has(main.waiting-room) {
     min-width: 4px;
     min-height: 4px;
     border-radius: 50%;
-    background: #7a5648;
+    background: #66241c;
     animation: waiting-room-pulse 1.2s ease-in-out infinite;
 }
 

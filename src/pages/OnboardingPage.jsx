@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import AppHeader from '../components/common/AppHeader';
 import MongsilDialogue from '../components/onboarding/MongsilDialogue';
@@ -40,8 +40,10 @@ function SpeakerIcon ()
 export default function OnboardingPage ()
 {
     const navigate = useNavigate();
+    const location = useLocation();
     // TODO: 마이 양에 다녀오면 단계·방·칩이 초기화된다. 필요해지면 sessionStorage에 남겨 그 화면으로 복원한다.
-    const [step, setStep] = useState(STEP_START);
+    // 담요 저장 후 '새 승차권 받기'로 오면 대기실 선택 단계부터 시작한다.
+    const [step, setStep] = useState(location.state?.startStep === STEP_ROOM ? STEP_ROOM : STEP_START);
     const [roomCode, setRoomCode] = useState(null);
     const [moodChip, setMoodChip] = useState(null);
     const [rooms, setRooms] = useState([]);
@@ -131,7 +133,7 @@ export default function OnboardingPage ()
 
     return (
         <main className={`onboarding onboarding-${step}`}>
-            <AppHeader showMySheep={step !== STEP_START} />
+            <AppHeader collapseOnDrag showMySheep={step !== STEP_START} />
 
             {step === STEP_START && (
                 <section className="onboarding-start">

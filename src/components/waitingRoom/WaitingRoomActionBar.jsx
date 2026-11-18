@@ -9,6 +9,8 @@ export default function WaitingRoomActionBar ({ passedTrains, onEndWaiting })
                 <img
                     className="waiting-room-train-pill-bg"
                     src="/assets/ui/waiting-room/train-passed-bar.png"
+                    srcSet="/assets/ui/waiting-room/train-passed-bar-sm.png 384w, /assets/ui/waiting-room/train-passed-bar.png 848w"
+                    sizes="(max-width: 640px) 128px, 220px"
                     alt=""
                     aria-hidden="true"
                 />

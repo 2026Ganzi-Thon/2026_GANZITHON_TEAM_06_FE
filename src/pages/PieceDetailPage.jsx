@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
-import PageLinks from '../components/common/PageLinks';
 import PanelFrame from '../components/common/PanelFrame';
 import StackCarousel from '../components/common/StackCarousel';
 import { PIECES, PIECE_BACK_IMAGE } from '../data/pieces';
@@ -95,7 +94,6 @@ export default function PieceDetailPage()
                     )}
                 </div>
             </PanelFrame>
-            <PageLinks />
         </main>
     );
 }

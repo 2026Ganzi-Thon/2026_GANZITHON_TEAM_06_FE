@@ -22,7 +22,7 @@ export default function WaitingRoomMarquee ({ arrivalCount, releasedCount, isBro
                 <div className="waiting-room-marquee-message-wrap">
                     <span className="waiting-room-marquee-train-icon" aria-hidden="true" />
                     <p className="waiting-room-marquee-message">
-                        열차는 한 시간에 한 번 지나가요.
+                        열차는 30분에 한 번 지나가요.
                         <br />
                         도착 시간은 알 수 없어요.
                     </p>
