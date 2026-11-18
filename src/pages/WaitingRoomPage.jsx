@@ -45,6 +45,10 @@ export default function WaitingRoomPage ()
     const [statsLoading, setStatsLoading] = useState(Boolean(trip?.roomCode));
     const [broadcastPhase, setBroadcastPhase] = useState('idle');
     const [broadcastMessage, setBroadcastMessage] = useState('');
+    // 다음 방송을 쓸 수 있게 되는 시각(ms). 버튼의 남은 초 표시와 새로고침 복원에 쓴다.
+    const [cooldownEndsAt, setCooldownEndsAt] = useState(null);
+    const [now, setNow] = useState(() => Date.now());
+    const cooldownStorageKey = `waitingRoomBroadcastEndsAt:${trip?.roomCode ?? ''}`;
     const [reactionVisible, setReactionVisible] = useState(false);
     const [reactionBroadcasterTicketNumber, setReactionBroadcasterTicketNumber] = useState(null);
     const broadcastTimerRef = useRef(null);
@@ -234,9 +238,17 @@ export default function WaitingRoomPage ()
         announce.volume = 0.5;
         announce.play().catch(() => {});
 
+        // 새로고침해도 대기 시간이 이어지도록 방송이 완전히 끝나는 시각을 저장해 둔다.
+        try
+        {
+            localStorage.setItem(cooldownStorageKey, String(Date.now() + BROADCAST_DURATION_MS + BROADCAST_COOLDOWN_MS));
+        }
+        catch { /* 저장소를 못 써도 방송은 그대로 동작한다 */ }
+
         broadcastTimerRef.current = setTimeout(() =>
         {
             closeReaction();
+            setCooldownEndsAt(Date.now() + BROADCAST_COOLDOWN_MS);
             setBroadcastPhase('cooldown');
 
             cooldownTimerRef.current = setTimeout(() =>
@@ -245,7 +257,30 @@ export default function WaitingRoomPage ()
                 setBroadcastMessage('');
             }, BROADCAST_COOLDOWN_MS);
         }, BROADCAST_DURATION_MS);
-    }, [clearBroadcastTimers, closeReaction, showReactionForBroadcast]);
+    }, [clearBroadcastTimers, closeReaction, cooldownStorageKey, showReactionForBroadcast]);
+
+    // 새로고침 직후 아직 방송 대기 시간이 남았다면 그 시간만큼 다시 막는다. (방송 문구는 복원하지 않는다)
+    useEffect(() =>
+    {
+        let endsAt = 0;
+
+        try
+        {
+            endsAt = Number(localStorage.getItem(cooldownStorageKey)) || 0;
+        }
+        catch { /* 저장소를 못 읽으면 처음부터 쓸 수 있게 둔다 */ }
+
+        const remaining = endsAt - Date.now();
+
+        if (remaining <= 0)
+        {
+            return;
+        }
+
+        setCooldownEndsAt(endsAt);
+        setBroadcastPhase('cooldown');
+        cooldownTimerRef.current = setTimeout(() => setBroadcastPhase('idle'), remaining);
+    }, [cooldownStorageKey]);
 
     useEffect(() =>
     {
@@ -354,6 +389,24 @@ export default function WaitingRoomPage ()
 
     const broadcastDisabled = broadcastPhase !== 'idle';
 
+    // 방송 중이거나 대기 시간(쿨타임)일 때 버튼에 남은 초를 보여 주기 위해 1초마다 줄인다.
+    const isBroadcastBlocked = broadcastPhase === 'broadcasting' || broadcastPhase === 'cooldown';
+    const cooldownLeft = broadcastPhase === 'cooldown' && cooldownEndsAt
+        ? Math.min(Math.max(Math.ceil((cooldownEndsAt - now) / 1000), 1), BROADCAST_COOLDOWN_MS / 1000)
+        : BROADCAST_COOLDOWN_MS / 1000;
+
+    useEffect(() =>
+    {
+        if (broadcastPhase !== 'cooldown')
+        {
+            return undefined;
+        }
+
+        const intervalId = setInterval(() => setNow(Date.now()), 1000);
+
+        return () => clearInterval(intervalId);
+    }, [broadcastPhase]);
+
     return (
         <main className={isHeaderHidden ? 'waiting-room waiting-room-header-hidden' : 'waiting-room'}>
             <AppHeader />
@@ -401,6 +454,7 @@ export default function WaitingRoomPage ()
                     onEndWaiting={handleEndWaiting}
                     onOpenBroadcast={handleOpenBroadcast}
                     broadcastDisabled={broadcastDisabled}
+                    broadcastCooldownLeft={isBroadcastBlocked ? cooldownLeft : null}
                 />
             </div>
         </main>

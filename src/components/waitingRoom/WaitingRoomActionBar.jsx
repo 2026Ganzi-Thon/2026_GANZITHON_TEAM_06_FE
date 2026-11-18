@@ -2,10 +2,12 @@ export default function WaitingRoomActionBar ({
     passedTrains,
     onEndWaiting,
     onOpenBroadcast,
-    broadcastDisabled = false
+    broadcastDisabled = false,
+    broadcastCooldownLeft = null
 })
 {
     const hasCount = typeof passedTrains === 'number';
+    const isCoolingDown = broadcastCooldownLeft !== null;
 
     return (
         <section className="waiting-room-actions" aria-label="대기실 액션">
@@ -27,8 +29,14 @@ export default function WaitingRoomActionBar ({
                     aria-disabled={broadcastDisabled}
                     onClick={onOpenBroadcast}
                 >
-                    <img src="/assets/ui/waiting-room/btn-broadcast.png" alt="" />
-                    <span className="visually-hidden">안내방송 작성</span>
+                    <img
+                        className={isCoolingDown ? 'is-off' : undefined}
+                        src={isCoolingDown ? '/assets/ui/waiting-room/btn-broadcast-off.png' : '/assets/ui/waiting-room/btn-broadcast.png'}
+                        alt=""
+                    />
+                    {isCoolingDown
+                        ? <span className="waiting-room-broadcast-cooldown">다음 방송까지 {broadcastCooldownLeft}초</span>
+                        : <span className="visually-hidden">안내방송 작성</span>}
                 </button>
                 <button type="button" className="waiting-room-end" onClick={onEndWaiting}>
                     <img src="/assets/ui/waiting-room/btn-end-waiting.png" alt="" />
