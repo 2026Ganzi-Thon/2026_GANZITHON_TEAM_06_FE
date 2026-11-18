@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 
 import { EventBus } from '../../../game/EventBus';
 import { readOnboardingTrip } from '../../../game/onboardingSession';
-import { changeKnittingPattern, fetchTicket } from '../../../services/tickets';
+import { changeKnittingPattern, deliverKnitting, fetchTicket } from '../../../services/tickets';
 import WoolTokHeader from './WoolTokHeader';
 import WoolTokPattern from './WoolTokPattern';
 
+// 도안이 뒤집혀 사라지는 시간(ms). style.css의 wool-pattern-flip-out 길이와 같게 둔다.
+const FLIP_OUT_MS = 250;
 const TOAST_DURATION_MS = 5000;
 // 패널이 열려 있는 동안 남은 털실을 다시 불러오는 간격
 const YARN_REFRESH_MS = 5000;
@@ -20,11 +22,35 @@ export default function WoolTokPanel ()
     const [knitting, setKnitting] = useState(null);
     const [error, setError] = useState('');
     const [isChanging, setIsChanging] = useState(false);
+    // 도안 뒤집기 연출 단계: 'out'(사라지는 중) | 'in'(새 도안이 나옴) | null
+    const [flip, setFlip] = useState(null);
+    const [isDelivering, setIsDelivering] = useState(false);
     const woolCount = knitting?.remainingYarnCount ?? 0;
 
     useEffect(() =>
     {
-        const handleOpen = () => setIsOpen(true);
+        // reroll: 전달한 털실(wool03)을 눌렀을 때. 서버에서 도안을 새로 뽑은 뒤(털실 1올 사용, 전달 기록 초기화) 연다.
+        const handleOpen = async (payload) =>
+        {
+            const ticketId = readOnboardingTrip()?.ticketId;
+
+            if (payload?.reroll && ticketId)
+            {
+                try
+                {
+                    setKnitting(await changeKnittingPattern(ticketId));
+                    setFlip('in');
+                    setError('');
+                    EventBus.emit('wool-reset');
+                }
+                catch (e)
+                {
+                    setError(e.message);
+                }
+            }
+
+            setIsOpen(true);
+        };
 
         EventBus.on('wool-tok-open', handleOpen);
 
@@ -105,14 +131,23 @@ export default function WoolTokPanel ()
 
         setIsChanging(true);
         setError('');
+        setFlip('out');
 
         try
         {
-            setKnitting(await changeKnittingPattern(ticketId));
+            // 이전 도안이 다 뒤집힌 뒤에 새 도안으로 바꾼다.
+            const [next] = await Promise.all([
+                changeKnittingPattern(ticketId),
+                new Promise((resolve) => setTimeout(resolve, FLIP_OUT_MS))
+            ]);
+
+            setKnitting(next);
+            setFlip('in');
         }
         catch (e)
         {
             setError(e.message);
+            setFlip(null);
         }
         finally
         {
@@ -120,12 +155,34 @@ export default function WoolTokPanel ()
         }
     };
 
-    // 대기실로 돌아가 털실을 wool03으로 바꾸고, 안내 문구를 보여준다.
-    const handleDeliver = () =>
+    // 서버에 전달을 기록한 뒤, 대기실로 돌아가 털실을 wool03으로 바꾸고 안내 문구를 보여준다.
+    const handleDeliver = async () =>
     {
-        EventBus.emit('wool-deliver');
-        setIsOpen(false);
-        setIsToastVisible(true);
+        const ticketId = readOnboardingTrip()?.ticketId;
+
+        if (!ticketId || isDelivering)
+        {
+            return;
+        }
+
+        setIsDelivering(true);
+        setError('');
+
+        try
+        {
+            await deliverKnitting(ticketId);
+            EventBus.emit('wool-deliver');
+            setIsOpen(false);
+            setIsToastVisible(true);
+        }
+        catch (e)
+        {
+            setError(e.message);
+        }
+        finally
+        {
+            setIsDelivering(false);
+        }
     };
 
     const toast = isToastVisible && (
@@ -141,13 +198,13 @@ export default function WoolTokPanel ()
             <section className="wool-panel" aria-label="털실 톡톡">
                 <WoolTokHeader woolCount={woolCount} onClose={handleClose} />
                 <div className="wool-panel-body">
-                    {knitting && <WoolTokPattern key={knitting.patternCode} patternCode={knitting.patternCode} onCompleteChange={setIsComplete} />}
+                    {knitting && <WoolTokPattern key={knitting.patternCode} patternCode={knitting.patternCode} flip={flip} onCompleteChange={setIsComplete} />}
                     {error && <p role="alert">{error}</p>}
                     <button type="button" className="wool-panel-change" disabled={!knitting || woolCount < 1 || isChanging} onClick={handleChangePattern}>
                         <img src="/assets/wool/revert-icon.png" alt="" />
                         도안 바꾸기 · 털실 1올
                     </button>
-                    <button type="button" className="wool-panel-deliver" disabled={!isComplete} onClick={handleDeliver}>역장에게 전달하기</button>
+                    <button type="button" className="wool-panel-deliver" disabled={!isComplete || isDelivering} onClick={handleDeliver}>역장에게 전달하기</button>
                 </div>
             </section>
         </div>

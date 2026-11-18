@@ -3,6 +3,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { PATTERN_IMAGE_NAMES } from '../../../data/pieces';
 import { WOOL_PATTERNS } from '../../../data/woolPatterns';
 
+// 매번 새로 불러오면 소리가 늦게 나므로 한 번만 미리 불러온다.
+const WOOL_SOUND = new Audio('/assets/sounds/wool.mp3');
+WOOL_SOUND.preload = 'auto';
+
 // 도안 코드(PATTERN_HEART)에 맞는 칸 목록. color는 그 칸을 채우는 실 이미지 번호입니다.
 function buildCells (name)
 {
@@ -10,7 +14,7 @@ function buildCells (name)
 }
 
 // 도안 위의 칸을 누르면 그 칸이 실 이미지로 채워진다.
-export default function WoolTokPattern ({ patternCode, onCompleteChange })
+export default function WoolTokPattern ({ patternCode, flip, onCompleteChange })
 {
     const name = PATTERN_IMAGE_NAMES[patternCode];
     const cells = useMemo(() => buildCells(name), [name]);
@@ -24,7 +28,29 @@ export default function WoolTokPattern ({ patternCode, onCompleteChange })
     // 다 채웠는지 부모(전달 버튼 활성화)에 알린다.
     useEffect(() => onCompleteChange?.(isComplete), [isComplete, onCompleteChange]);
 
-    const handleFill = (id) => setFilled((prev) => (prev.has(id) ? prev : new Set(prev).add(id)));
+    // 도안을 완성하는 순간 종소리를 한 번 낸다.
+    useEffect(() =>
+    {
+        if (isComplete)
+        {
+            const bell = new Audio('/assets/sounds/bell-short.mp3');
+
+            bell.volume = 0.5;
+            bell.play().catch(() => {});
+        }
+    }, [isComplete]);
+
+    const handleFill = (id) =>
+    {
+        if (filled.has(id))
+        {
+            return;
+        }
+
+        // 미리 불러둔 소리를 복제해 재생해 겹쳐 들리게 한다. 자동재생 차단 등으로 실패해도 무시한다.
+        WOOL_SOUND.cloneNode().play().catch(() => {});
+        setFilled((prev) => (prev.has(id) ? prev : new Set(prev).add(id)));
+    };
 
     // 포인터 아래의 칸을 찾는다. 캡처 중에는 target이 고정되므로 좌표로 찾는다.
     const cellAt = (event) =>
@@ -76,7 +102,7 @@ export default function WoolTokPattern ({ patternCode, onCompleteChange })
     }
 
     return (
-        <div className={isComplete ? 'wool-pattern is-complete' : 'wool-pattern'}>
+        <div className={`wool-pattern${isComplete ? ' is-complete' : ''}${flip ? ` is-flip-${flip}` : ''}`}>
             <img className="wool-pattern-bg" src={`/assets/blanket/d-${name}.png`} alt="도안" draggable={false} />
             <div
                 className="wool-pattern-grid"

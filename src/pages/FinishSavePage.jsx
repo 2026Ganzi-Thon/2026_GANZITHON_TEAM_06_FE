@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { readPendingPieces } from '../game/onboardingSession';
 import { readAccessToken } from '../services/auth';
 import { claimPendingTickets } from '../services/tickets';
 import { login, signup } from '../services/users';
@@ -15,7 +16,10 @@ export default function FinishSavePage()
     const [isLogin, setIsLogin] = useState(false);
     const [isEnd, setIsEnd] = useState(false);
     // 완료 화면 제목 (null이면 완료 화면을 보여주지 않음)
-    const [doneTitle, setDoneTitle] = useState(null);
+    // 로그인돼 있고 옮길 임시 조각이 없으면 이미 저장한 것이므로 저장 안내 없이 완료 화면으로 시작합니다.
+    const [doneTitle, setDoneTitle] = useState(() => (
+        readAccessToken() && !readPendingPieces().length ? '담요에 이어 붙였어요.' : null
+    ));
     const [isNewUser, setIsNewUser] = useState(true);
     const [nickname, setNickname] = useState('');
     const [pin, setPin] = useState('');

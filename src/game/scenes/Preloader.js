@@ -39,6 +39,7 @@ export class Preloader extends Scene
             this.load.svg(`steam-${frame}`, `ui/waiting-room/steam_${String(frame).padStart(2, '0')}.svg`, { scale: 3 });
         }
 
+        this.load.audio('train-sound', 'sounds/train.mp3');
         this.load.svg('wool01', 'ui/waiting-room/wool01.svg', { scale: 3 });
         this.load.svg('wool02', 'ui/waiting-room/wool02.svg', { scale: 3 });
         this.load.svg('wool03', 'ui/waiting-room/wool03.svg', { scale: 3 });

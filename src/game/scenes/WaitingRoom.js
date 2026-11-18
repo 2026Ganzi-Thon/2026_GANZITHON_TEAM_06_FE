@@ -40,7 +40,9 @@ const STEAM_OFFSET = { x: -80, y: -48, width: 40 };
 // 열차가 창 오른쪽 밖에서 왼쪽 밖으로 지나가는 x 범위(텍스처 기준)와 시간.
 const TRAIN_START_X = 1058 + TRAIN_TEXTURE.width / 2;
 const TRAIN_END_X = 388 - TRAIN_TEXTURE.width / 2;
-const TRAIN_PASS_MS = 10000;
+const TRAIN_PASS_MS = 8000;
+// 열차 소리가 커지고 작아지는 구간 (전체 이동 시간 대비 비율)
+const TRAIN_FADE = 0.25;
 
 // 책장 위 벽에 거는 시계 (배경 텍스처 기준, 시계 그림의 아랫변 중심 좌표). 위치는 여기서 조정한다.
 // x는 양옆 벽등 사이의 가운데, y는 벽지(나무 장식 아래~걸레받이 위)의 세로 가운데에 시계가 오도록 잡았다.
@@ -103,8 +105,8 @@ export class WaitingRoom extends Scene
         // 털실이 한 올 쌓이기 전(wool01)에는 누를 수 없고, 쌓이면 wool02로 바뀌어 누르면 털실 톡톡이 열린다.
         this.wool.on('pointerdown', () =>
         {
-            // 털실톡톡 패널을 열도록 React에 알립니다.
-            EventBus.emit('wool-tok-open');
+            // 털실톡톡 패널을 열도록 React에 알립니다. 전달한 뒤(wool03)에는 새 도안을 뽑아 다시 엽니다.
+            EventBus.emit('wool-tok-open', { reroll: Boolean(this.isWoolDelivered) });
         });
         // DEBUG_WOOL_POSITIONS를 true로 바꾸면 모든 벤치 옆 털실 위치를 번호와 함께 보여 준다 (위치 확인용).
         this.debugWools = [];
@@ -161,15 +163,24 @@ export class WaitingRoom extends Scene
         EventBus.on(WAITING_ROOM_REACTION_REMOTE, this.handleWaitingRoomReaction);
         EventBus.on(WAITING_ROOM_BIND_LOCAL_PLAYER, this.handleBindLocalPlayer);
 
-        // 도안을 전달하면 털실이 wool03으로 바뀌고, 더 이상 누를 수 없다.
+        // 도안을 전달하면 털실이 wool03으로 바뀐다. wool03을 누르면 새 도안으로 털실 톡톡이 다시 열린다.
         this.handleWoolDeliver = () =>
         {
             this.isWoolDelivered = true;
             this.wool.setTexture('wool03');
-            this.wool.disableInteractive();
+            this.wool.setInteractive({ useHandCursor: true });
             this.layoutWool();
         };
         EventBus.on('wool-deliver', this.handleWoolDeliver);
+
+        // 새 도안을 뽑았으니 전달 상태를 풀고 털실을 wool02로 되돌린다.
+        this.handleWoolReset = () =>
+        {
+            this.isWoolDelivered = false;
+            this.updateWoolState();
+            this.layoutWool();
+        };
+        EventBus.on('wool-reset', this.handleWoolReset);
 
         EventBus.emit('current-scene-ready', this);
     }
@@ -192,6 +203,7 @@ export class WaitingRoom extends Scene
             EventBus.off(WAITING_ROOM_BIND_LOCAL_PLAYER, this.handleBindLocalPlayer);
         }
 
+        this.trainSound?.stop();
         this.clearAllReactionEmojis();
         this.occupantsByTicketId.clear();
 
@@ -203,6 +215,7 @@ export class WaitingRoom extends Scene
         this.clearTrainSchedule();
 
         EventBus.off('wool-deliver', this.handleWoolDeliver);
+        EventBus.off('wool-reset', this.handleWoolReset);
         this.scale.off('resize', this.updateRoomLayout, this);
         this.input.off('pointermove', this.handlePanDrag, this);
         this.input.off('wheel', this.handlePanWheel, this);
@@ -306,6 +319,7 @@ export class WaitingRoom extends Scene
             this.trainPassTween.stop();
             this.trainPassTween = null;
             this._trainPassing = false;
+            this.trainSound?.stop();
         }
     }
 
@@ -350,18 +364,26 @@ export class WaitingRoom extends Scene
         // 열차가 지나갔다는 안내를 React가 띄우도록 알립니다.
         EventBus.emit('train-passed');
         this.trainTextureX = TRAIN_START_X;
-
         if (this.trainPassTween)
         {
             this.trainPassTween.stop();
         }
 
+        // 열차가 지나가는 동안 소리를 반복 재생하고, 다 지나가면 멈춘다.
+        this.trainSound ??= this.sound.add('train-sound', { loop: true });
+        this.trainSound.play({ volume: 0 });
+
         this.trainPassTween = this.tweens.add({
             targets: this,
             trainTextureX: TRAIN_END_X,
             duration: TRAIN_PASS_MS,
-            onUpdate: () =>
+            onUpdate: (tween) =>
             {
+                // 처음 TRAIN_FADE 구간은 작게 시작해 커지고, 마지막 TRAIN_FADE 구간은 점점 작아진다.
+                const progress = tween.progress;
+
+                this.trainSound.setVolume(Math.max(0, Math.min(1, progress / TRAIN_FADE, (1 - progress) / TRAIN_FADE)));
+
                 const trainPos = this.textureToWorld(this.trainTextureX, TRAIN_TEXTURE.y);
 
                 this.train.setPosition(trainPos.x, trainPos.y);
@@ -374,6 +396,7 @@ export class WaitingRoom extends Scene
             {
                 this._trainPassing = false;
                 this.trainPassTween = null;
+                this.trainSound.stop();
             }
         });
     }

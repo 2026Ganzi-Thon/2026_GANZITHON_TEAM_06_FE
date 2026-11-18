@@ -228,6 +228,12 @@ export default function WaitingRoomPage ()
         setBroadcastPhase('broadcasting');
         showReactionForBroadcast(broadcasterTicketNumber);
 
+        // 전광판에 방송이 뜰 때 안내 효과음을 낸다. 자동재생 차단 등으로 실패해도 무시한다.
+        const announce = new Audio('/assets/sounds/announce.mp3');
+
+        announce.volume = 0.5;
+        announce.play().catch(() => {});
+
         broadcastTimerRef.current = setTimeout(() =>
         {
             closeReaction();
