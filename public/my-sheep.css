@@ -179,8 +179,11 @@
 }
 
 .my-sheep-blanket__cell img {
-    width: 88%;
+    /* 조각 이미지는 둘레가 투명해서, 칸보다 크게 키워야 아래 점선이 가려진다 */
+    width: 125%;
     height: auto;
+    /* 점선 칸에 맞게 살짝 위로 올린다 */
+    transform: translateY(-12%);
 }
 
 .my-sheep-box-head {
@@ -808,5 +811,52 @@
 
     .my-sheep-box--side {
         grid-row: 1 / span 2;
+    }
+}
+
+/* 로그인 전: 패널 정중앙에 안내 문구만 둔다 */
+.my-sheep-login-msg {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--color-brown-title);
+    pointer-events: none;
+}
+
+/* 등장 연출: 패널이 아래에서 올라오며 나타나고, 위의 탭과 오른쪽 위 버튼이 뒤따라 나타난다 */
+.my-sheep-panel {
+    animation: my-sheep-panel-in 0.6s ease-out both;
+}
+
+.my-sheep-tabs {
+    animation: my-sheep-top-in 0.5s ease-out 0.35s both;
+}
+
+.my-sheep-actions {
+    animation: my-sheep-top-in 0.5s ease-out 0.5s both;
+}
+
+@keyframes my-sheep-panel-in {
+    from { opacity: 0; transform: translateY(32px); }
+    to { opacity: 1; transform: none; }
+}
+
+/* 탭은 transform(translateY(-100%))으로 자리를 잡고 있어서, 겹치지 않게 개별 속성 translate로 움직인다 */
+@keyframes my-sheep-top-in {
+    from { opacity: 0; translate: 0 12px; }
+    to { opacity: 1; translate: 0 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .my-sheep-panel,
+    .my-sheep-tabs,
+    .my-sheep-actions {
+        animation: none;
     }
 }

@@ -219,13 +219,64 @@ section.onboarding-status,
     color: #8b2e24;
 }
 
-section.onboarding-start,
-.ticket-step {
+section.onboarding-start {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: var(--space-md);
     padding: 48px var(--space-md);
+}
+
+/* 승차권이 화면 가운데에 오도록: 위(안내 글)·가운데(승차권)·아래(버튼)를 세 줄로 나누고 위·아래 줄이 같은 높이를 갖게 한다 */
+.ticket-step {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    display: grid;
+    grid-template-rows: 1fr auto 1fr;
+    justify-items: center;
+    padding: 0 var(--space-md);
+    pointer-events: none; /* 위에 얹힌 레이어가 헤더 클릭을 막지 않게 한다 */
+}
+
+.ticket-step > * {
+    pointer-events: auto;
+}
+
+.ticket-step-top,
+.ticket-step-bottom {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.ticket-step-top {
+    align-self: end;
+    padding-bottom: var(--space-md);
+}
+
+.ticket-step-bottom {
+    align-self: start;
+    padding-top: var(--space-md);
+}
+
+/* 화면 높이가 낮으면 가운데 맞춤 대신 위에서부터 쌓는다 */
+@media (max-height: 560px) {
+    .ticket-step {
+        position: static;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-md);
+        padding: 48px var(--space-md);
+        pointer-events: auto;
+    }
+
+    .ticket-step-top,
+    .ticket-step-bottom {
+        padding: 0;
+    }
 }
 
 .onboarding-title,
@@ -237,7 +288,6 @@ section.onboarding-start,
 
 .onboarding-pill,
 .onboarding-skip,
-.onboarding-choice,
 .onboarding-chip {
     border: 0;
     font: inherit;
@@ -291,23 +341,7 @@ section.onboarding-start,
     padding: 6px 14px;
 }
 
-.onboarding-next {
-    width: 148px;
-    min-width: 0;
-    border: 0;
-    padding: 0;
-    background: transparent;
-    cursor: pointer;
-}
-
-.onboarding-next img {
-    display: block;
-    width: 100%;
-    height: auto;
-}
-
 .onboarding-pill:disabled,
-.onboarding-next:disabled,
 .onboarding-skip:disabled {
     cursor: not-allowed;
     opacity: 0.45;
@@ -323,7 +357,7 @@ section.onboarding-start,
 }
 
 .onboarding-choices {
-    max-width: 720px;
+    max-width: 632px; /* 버튼 너비 600px + 좌우 여백 */
     margin-left: auto;
     margin-right: auto;
     padding-right: var(--space-md);
@@ -332,130 +366,87 @@ section.onboarding-start,
 
 .onboarding-chips {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+    max-width: 1000px; /* 칩이 화면 폭만큼 커지지 않게 한다 (칩 하나가 약 236 x 72px) */
+    margin-top: 120px; /* 위쪽 여백을 늘려 칩을 아래로 내린다 */
+    margin-left: auto;
+    margin-right: auto;
     padding-right: var(--space-md);
     padding-left: var(--space-md);
 }
 
-.onboarding-choice,
+/* 상태 칩: 선택 전은 chip-off.png, 선택하면 chip-on.png. 선택하면 오른쪽 위에 흰 원 안의 체크를 보여 준다 */
 .onboarding-chip {
     position: relative;
     width: 100%;
+    height: 72px; /* 높이는 고정하고 너비만 목록 폭에 맞춰 늘린다 */
     display: flex;
-    gap: var(--space-sm);
     align-items: center;
     justify-content: center;
-    border-radius: 999px;
-    background: var(--color-cream);
-    color: var(--color-ink);
+    padding: 0 12px;
+    background: url('/assets/backgrounds/onboarding/chip-off.png') center / 100% 100% no-repeat;
+    color: #422d27;
     text-align: center;
-    padding: 12px 28px;
+    font-size: 18px;
+    font-weight: 700;
 }
 
-.onboarding-choice {
-    justify-content: flex-start;
-    text-align: left;
-    padding-left: 16px;
-    padding-right: 48px;
-}
-
-.onboarding-choice-index {
-    display: inline-flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    background: var(--color-ink);
-    color: #fff;
-}
-
-.onboarding-choice-copy strong,
-.onboarding-choice-copy span {
-    display: block;
-}
-
-.onboarding-choice.is-selected,
 .onboarding-chip.is-selected {
-    background: var(--color-coral);
+    background-image: url('/assets/backgrounds/onboarding/chip-on.png');
     color: #fff;
 }
 
-.onboarding-choice.is-selected .onboarding-choice-index {
-    background: #fff;
-    color: var(--color-coral);
-}
-
-.onboarding-chip {
-    font-size: clamp(12px, 1.5vw, 16px);
-    padding-right: 32px;
-    padding-left: 32px;
-}
-
-.onboarding-check {
+.onboarding-chip .finish-waiting-check {
     position: absolute;
-    right: 16px;
-}
-
-.mongsil-dialogue {
-    position: fixed;
-    left: 50%;
-    top: 62%;
-    z-index: 2;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-md);
-    width: min(920px, calc(100% - 32px));
-    margin: 0;
-    transform: translate(-50%, -50%);
-}
-
-.mongsil-dialogue-frame {
-    position: relative;
-    container-type: inline-size;
-    flex: 1;
-    min-width: 0;
-}
-
-.mongsil-dialogue-frame img {
-    display: block;
-    width: 100%;
-    height: auto;
-}
-
-.mongsil-dialogue-text {
-    position: absolute;
-    left: 31%;
-    top: 48%;
-    width: 48%;
-    height: 42%;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    color: #5c4636;
-    font-size: 2.4cqw;
-    line-height: 1.4;
-}
-
-.mongsil-dialogue-text p {
-    margin: 0;
-}
-
-.mongsil-dialogue-actions {
-    position: absolute;
+    top: 12%;
     right: 4%;
-    top: 46%;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 8px;
+    width: 22px;
+    height: 22px;
+}
+
+.onboarding-chip .finish-waiting-check img {
+    width: 11px;
+    height: 11px;
+}
+
+@media (max-width: 600px) {
+    .onboarding-chip {
+        height: auto;
+        aspect-ratio: 258 / 86;
+        padding: 0 4px;
+        font-size: 12px;
+    }
+}
+
+/* 온보딩 몽실 역장 대화: 화면 아래쪽에 놓는다 (패널 모양은 finish-waiting.css의 대화 패널을 그대로 쓴다) */
+.onboarding-chat {
+    --finish-waiting-panel-width: 920px;
+
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 77%;
+    z-index: 2;
+    transform: translateY(-50%);
+    pointer-events: none; /* 투명한 빈 곳이 아래 화면을 막지 않게 한다 */
+}
+
+.onboarding-chat .finish-waiting-panel {
+    pointer-events: auto;
+}
+
+.onboarding-chat .finish-waiting-panel.is-closing {
+    pointer-events: none;
+}
+
+.onboarding-chat .finish-waiting-panel {
+    margin-top: 0;
+    margin-bottom: 0;
 }
 
 .ticket {
     position: relative;
     container-type: inline-size;
-    width: min(100%, 640px);
+    width: min(100%, 560px);
 }
 
 .ticket img {
@@ -474,11 +465,13 @@ section.onboarding-start,
 }
 
 .ticket-destination {
-    left: 6%;
-    top: 43%;
-    width: 28%;
+    left: 4.6%; /* '행선지 안내' 글자의 왼쪽 끝에 맞춘다 */
+    top: 41%;
+    width: 32%;
     height: 18%;
-    font-size: 3.2cqw;
+    font-size: min(20px, 3.125cqw); /* 승차권이 640px일 때 20px, 작아지면 같이 줄어든다 */
+    font-weight: 700;
+    color: #333333;
 }
 
 .ticket-number {
@@ -486,24 +479,103 @@ section.onboarding-start,
     top: 71.92%;
     width: 24.52%;
     height: 18.75%;
-    justify-content: center;
-    font-size: 4cqw;
+    justify-content: center; /* 점선 사각형 가운데 */
+    font-size: min(24px, 3.75cqw); /* 승차권이 640px일 때 24px */
+    font-weight: 500;
+    color: #ff6e52;
     line-height: 1;
 }
 
 .ticket-sparkle {
-    width: min(180px, 42%);
+    width: min(150px, 35%);
     height: auto;
 }
 
 .ticket-caption {
     margin: 0;
     text-align: center;
+    font-size: clamp(16px, 5vw, 24px);
+    font-weight: 700;
+    color: #fff;
+    transform: translateY(-8px); /* 살짝 위로 */
+}
+
+/* 승차권 받기 버튼: 공용 알약 모양 대신 모서리 12px의 넓은 버튼 */
+.ticket-pill {
+    justify-content: center;
+    min-width: 260px;
+    padding: 14px 28px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
 }
 
 .ticket-pill-icon {
-    width: 56px;
+    width: 24px;
     height: auto;
+}
+
+/* 등장 연출: 승차권이 오른쪽에서 열차처럼 들어와 자리 잡고, 안내 글은 위에서, 버튼은 아래에서 뒤따라 나타난다 */
+.ticket {
+    animation: ticket-enter 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+}
+
+.ticket-step-top {
+    animation: ticket-fade-in 0.6s ease-out 0.3s both;
+}
+
+.ticket-step-bottom {
+    animation: ticket-fade-in 0.6s ease-out 0.6s both;
+}
+
+@keyframes ticket-enter {
+    from { opacity: 0; transform: translateX(80px) scale(0.96); }
+    to { opacity: 1; transform: none; }
+}
+
+@keyframes ticket-fade-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+}
+
+/* 발급 연출: 승차권이 아래에서 올라와 자리 잡고, 번호가 도장처럼 찍히고, 위의 반짝이가 한 번 커진다 */
+.ticket.is-issued {
+    animation: ticket-print 0.8s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+.ticket.is-issued .ticket-number {
+    animation: ticket-number-stamp 0.5s ease-out 0.7s both;
+}
+
+.ticket-step.is-issued .ticket-sparkle {
+    animation: ticket-sparkle-pulse 0.9s ease-out;
+}
+
+@keyframes ticket-print {
+    0% { opacity: 0.55; transform: translateY(40px) scale(0.96); filter: brightness(1.15); }
+    60% { opacity: 1; transform: translateY(-8px) scale(1.01); }
+    100% { opacity: 1; transform: none; filter: none; }
+}
+
+@keyframes ticket-number-stamp {
+    from { opacity: 0; transform: scale(1.6); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes ticket-sparkle-pulse {
+    40% { transform: scale(1.25); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ticket,
+    .ticket-step-top,
+    .ticket-step-bottom,
+    .ticket.is-issued,
+    .ticket.is-issued .ticket-number,
+    .ticket-step.is-issued .ticket-sparkle {
+        animation: none;
+    }
 }
 
 body:has(main.waiting-room) {
@@ -786,6 +858,21 @@ body:has(main.waiting-room) {
     .wool-tok-toast { animation: none; }
 }
 
+/* 열차가 지나갈 때 뜨는 몽실 역장 안내 패널: 하단 액션 바 위에 놓는다 (패널 모양은 finish-waiting.css의 대화 패널을 그대로 쓴다) */
+.waiting-room-train-chat {
+    --finish-waiting-panel-width: 760px;
+
+    position: absolute;
+    bottom: clamp(72px, 9cqw, 110px);
+    left: 0;
+    right: 0;
+    z-index: 5;
+}
+
+.waiting-room-train-chat .finish-waiting-panel {
+    margin-bottom: 0;
+}
+
 .wool-panel-header {
     display: flex;
     justify-content: space-between;
@@ -1056,13 +1143,18 @@ body:has(main.waiting-room) {
     }
 
     .waiting-room .waiting-room-top {
-        width: 78%;
-        max-width: 400px;
+        width: 70%;
+        max-width: 356px;
     }
 
     .waiting-room .waiting-room-marquee {
         width: 84%;
         max-width: 400px;
+    }
+
+    /* 아이콘과 글자 사이 간격 = 전광판 왼쪽 끝에서 아이콘까지의 여백(전광판 너비의 6%)의 절반 */
+    .waiting-room .waiting-room-marquee-message-wrap {
+        gap: min(2.52cqw, 12px);
     }
 }
 
@@ -1073,8 +1165,8 @@ body:has(main.waiting-room) {
     }
 
     .waiting-room .waiting-room-top {
-        width: 82%;
-        max-width: 380px;
+        width: 74%;
+        max-width: 336px;
     }
 
     .waiting-room .waiting-room-marquee {
@@ -1082,15 +1174,15 @@ body:has(main.waiting-room) {
         max-width: 360px;
     }
 
+    .waiting-room .waiting-room-marquee-message-wrap {
+        gap: min(2.64cqw, 10.8px);
+    }
+
     .waiting-room .waiting-room-top-copy h1 {
         font-size: 13px;
     }
 
     .waiting-room .waiting-room-top-copy p {
-        font-size: 10px;
-    }
-
-    .waiting-room .waiting-room-top-waiting {
         font-size: 10px;
     }
 
@@ -1119,10 +1211,9 @@ body:has(main.waiting-room) {
         max-width: 46%;
     }
 
-    .waiting-room .waiting-room-train-pill-value {
-        left: 62.8%; /* 이미지의 '열차'와 '대' 사이 빈칸(약 65~75%) 가운데 */
-        width: 16%;
-        font-size: 9px;
+    /* 알약이 작아지는 만큼 글자 비율을 키워 읽히게 한다 (두 자리 숫자까지 한 줄에 들어간다) */
+    .waiting-room .waiting-room-train-pill-text {
+        font-size: 8.2cqw;
     }
 
     .waiting-room .waiting-room-broadcast img,
@@ -1139,13 +1230,17 @@ body:has(main.waiting-room) {
     }
 
     .waiting-room .waiting-room-top {
-        width: 74%;
-        max-width: 320px;
+        width: 66%;
+        max-width: 284px;
     }
 
     .waiting-room .waiting-room-marquee {
         width: 80%;
         max-width: 300px;
+    }
+
+    .waiting-room .waiting-room-marquee-message-wrap {
+        gap: min(2.4cqw, 9px);
     }
 
     .waiting-room .waiting-room-actions {
@@ -1156,6 +1251,11 @@ body:has(main.waiting-room) {
 
     .waiting-room .waiting-room-marquee-message {
         font-size: 9px;
+    }
+
+    /* 좁은 상단바에서 '현재 대기 N명'이 칸을 넘지 않게 한다 */
+    .waiting-room .waiting-room-top-waiting {
+        font-size: 11px;
     }
 
     .waiting-room .waiting-room-marquee-stats-label {
@@ -1189,8 +1289,8 @@ body:has(main.waiting-room) {
     }
 
     .waiting-room .waiting-room-top {
-        width: 30%;
-        max-width: 260px;
+        width: 26%;
+        max-width: 228px;
     }
 
     .waiting-room .waiting-room-marquee {
@@ -1200,6 +1300,10 @@ body:has(main.waiting-room) {
         width: 36%;
         max-width: 310px;
         transform: translateX(-50%);
+    }
+
+    .waiting-room .waiting-room-marquee-message-wrap {
+        gap: min(1.08cqw, 9.3px);
     }
 
     .waiting-room .waiting-room-marquee-message {
@@ -1216,6 +1320,10 @@ body:has(main.waiting-room) {
 
     .waiting-room .waiting-room-marquee-live {
         font-size: 10px;
+    }
+
+    .waiting-room .waiting-room-top-waiting {
+        font-size: 9px;
     }
 }
 
@@ -1266,8 +1374,8 @@ body:has(main.waiting-room) {
     z-index: 2;
     top: 0.9cqw;
     left: 1.1cqw;
-    width: 27cqw;
-    max-width: 360px;
+    width: 24cqw;
+    max-width: 320px;
     margin: 0;
     padding: 0;
     border: 0;
@@ -1325,18 +1433,14 @@ body:has(main.waiting-room) {
     gap: 0.35cqw;
     width: 34%;
     margin: 0;
-    padding: 0 0.15cqw 0 2.2cqw;
+    padding: 0 0.15cqw 0 1.2cqw;
     border: 0;
     background: transparent;
-    font-size: 0.65cqw;
-    color: var(--color-brown-text);
+    font-size: 13px;
+    font-weight: 500;
+    color: #333333;
     white-space: nowrap;
     transform: translateY(-50%);
-}
-
-.waiting-room-top-waiting-value {
-    font-weight: 700;
-    color: var(--color-ink);
 }
 
 .waiting-room-marquee {
@@ -1380,7 +1484,8 @@ body:has(main.waiting-room) {
     display: flex;
     flex: 1 1 auto;
     align-items: center;
-    gap: 0.55cqw;
+    /* 아이콘과 글자 사이 간격 = 전광판 왼쪽 끝에서 아이콘까지의 여백(전광판 너비 min(48cqw, 620px)의 6%)의 절반 */
+    gap: min(1.44cqw, 18.6px);
     min-width: 0;
     max-width: 62%;
 }
@@ -1521,6 +1626,7 @@ body:has(main.waiting-room) {
     min-width: 148px;
     margin: 0;
     aspect-ratio: 848 / 216;
+    container-type: inline-size;
 }
 
 .waiting-room-train-pill-bg {
@@ -1531,20 +1637,22 @@ body:has(main.waiting-room) {
     pointer-events: none;
 }
 
-.waiting-room-train-pill-value {
+/* 아이콘 오른쪽의 '지나간 열차 N대'. 글자 크기는 알약 너비에 비례해 줄어들고 늘어난다. */
+.waiting-room-train-pill-text {
     position: absolute;
     top: 50%;
-    left: 63%;
-    width: 14%;
-    min-width: 1.1em;
-    font-size: 0.88cqw;
+    /* 아이콘 오른쪽 끝(25.5%)부터 알약 안쪽 테두리(96.7%)까지의 가운데에 놓아, 글자 양옆 여백이 같게 한다 */
+    left: 24%;
+    right: 4.8%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 6.8cqw;
     font-weight: 700;
     line-height: 1;
-    color: var(--color-ink);
-    text-align: center;
-    font-variant-numeric: tabular-nums;
+    color: var(--color-brown-stroke);
     white-space: nowrap;
-    transform: translateY(-48%);
+    transform: translateY(-50%);
 }
 
 .waiting-room-action-buttons {
