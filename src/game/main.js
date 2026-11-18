@@ -9,7 +9,7 @@ const config = {
     width: 1442,
     height: 841,
     parent: 'game-container',
-    backgroundColor: '#3d2a24',
+    backgroundColor: '#000000',
     scale: {
         mode: Scale.RESIZE,
         autoCenter: Scale.CENTER_BOTH

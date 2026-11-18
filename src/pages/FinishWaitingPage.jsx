@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
-import PageLinks from '../components/common/PageLinks';
+import AppHeader from '../components/common/AppHeader';
 import GiftView from '../components/finishWaiting/GiftView';
 import { INTRO_STEP, SCENARIOS } from '../data/finishWaitingScenarios';
 
@@ -41,7 +41,7 @@ export default function FinishWaitingPage()
     {
         return (
             <main className="finish-waiting-page">
-                <PageLinks />
+                <AppHeader collapseOnDrag />
                 <GiftView onReceive={() => navigate('/finish-waiting/save')} />
             </main>
         );
@@ -49,7 +49,7 @@ export default function FinishWaitingPage()
 
     return (
         <main className="finish-waiting-page">
-            <PageLinks />
+            <AppHeader collapseOnDrag />
             <div className="finish-waiting-menu">
                 <Link to="/waiting-room" className="finish-waiting-back">아직 더 기다릴래요 &gt;</Link>
                 {OPTIONS.map((option, index) => (

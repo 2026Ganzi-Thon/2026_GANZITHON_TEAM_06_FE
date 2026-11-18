@@ -4,16 +4,17 @@
 /* 마이 양: 배경 + 패널을 화면 가운데보다 살짝 아래에 크게 배치 */
 .my-sheep-page {
     min-height: 100dvh;
+    display: flow-root; /* 패널 margin 이 밖으로 새어 body 의 검은 배경이 보이는 것을 막는다 */
     background: url('/assets/common/background-exit.png') center / cover no-repeat;
 }
 
 .my-sheep-panel {
     /* 사각형·안내 박스·우상단 버튼이 공유하는 좌우 여백 */
     --my-sheep-inset-x: 10%;
-    position: fixed;
-    left: 50%;
-    top: 55%;
-    transform: translate(-50%, -50%);
+    /* 고정하지 않고 헤더 아래에 이어 붙여, 화면이 작으면 배경째 위아래로 스크롤한다 */
+    position: relative;
+    /* 위쪽 48px: 패널 위에 걸친 탭 자리 */
+    margin: 48px auto 24px;
     width: min(60vw, 900px);
 }
 
@@ -778,9 +779,9 @@
 @media (max-width: 600px) {
     .my-sheep-panel {
         --my-sheep-inset-x: 8%;
-        top: 57%;
         width: 96vw;
         height: 84dvh;
+        margin: 40px auto 16px;
     }
 
     /* 3:2 이미지를 세로 패널에 맞춰 늘린다 */
@@ -802,7 +803,6 @@
 /* 가로 폰: 패널을 화면 높이에 맞춰(3:2 유지) 좌우 2단 그대로 둔다 */
 @media (min-width: 601px) and (max-height: 520px) {
     .my-sheep-panel {
-        top: 55%;
         width: min(96vw, 138dvh);
     }
 
