@@ -1,4 +1,9 @@
-export default function WaitingRoomActionBar ({ passedTrains, onEndWaiting })
+export default function WaitingRoomActionBar ({
+    passedTrains,
+    onEndWaiting,
+    onOpenBroadcast,
+    broadcastDisabled = false
+})
 {
     const hasCount = typeof passedTrains === 'number';
 
@@ -15,7 +20,13 @@ export default function WaitingRoomActionBar ({ passedTrains, onEndWaiting })
                 <span className="waiting-room-train-pill-text">지나간 열차 {hasCount ? passedTrains : '—'}대</span>
             </p>
             <div className="waiting-room-action-buttons">
-                <button type="button" className="waiting-room-broadcast" disabled aria-disabled="true">
+                <button
+                    type="button"
+                    className="waiting-room-broadcast"
+                    disabled={broadcastDisabled}
+                    aria-disabled={broadcastDisabled}
+                    onClick={onOpenBroadcast}
+                >
                     <img src="/assets/ui/waiting-room/btn-broadcast.png" alt="" />
                     <span className="visually-hidden">안내방송 작성</span>
                 </button>

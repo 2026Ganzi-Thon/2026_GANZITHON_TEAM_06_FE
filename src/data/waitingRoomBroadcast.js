@@ -1,0 +1,4 @@
+export const BROADCAST_DURATION_MS = 15_000;
+export const BROADCAST_COOLDOWN_MS = 30_000;
+export const REACTION_VISIBLE_MS = 3_000;
+export const REACTION_FEEDBACK_MS = 1_000;

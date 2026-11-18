@@ -8,8 +8,16 @@ function formatStat (value)
     return `${value}건`;
 }
 
-export default function WaitingRoomMarquee ({ arrivalCount, releasedCount, isBroadcasting = true })
+export default function WaitingRoomMarquee ({
+    arrivalCount,
+    releasedCount,
+    phase = 'idle',
+    broadcastMessage = ''
+})
 {
+    const isBroadcasting = phase === 'broadcasting';
+    const showDefaultMessage = phase !== 'broadcasting';
+
     return (
         <section className="waiting-room-marquee" aria-label="안내 전광판">
             <img
@@ -21,11 +29,17 @@ export default function WaitingRoomMarquee ({ arrivalCount, releasedCount, isBro
             <div className="waiting-room-marquee-body">
                 <div className="waiting-room-marquee-message-wrap">
                     <span className="waiting-room-marquee-train-icon" aria-hidden="true" />
-                    <p className="waiting-room-marquee-message">
-                        열차는 30분에 한 번 지나가요.
-                        <br />
-                        도착 시간은 알 수 없어요.
-                    </p>
+                    {showDefaultMessage ? (
+                        <p className="waiting-room-marquee-message">
+                            열차는 30분에 한 번 지나가요.
+                            <br />
+                            도착 시간은 알 수 없어요.
+                        </p>
+                    ) : (
+                        <p className="waiting-room-marquee-message waiting-room-marquee-message-broadcast">
+                            {broadcastMessage}
+                        </p>
+                    )}
                 </div>
                 <div className="waiting-room-marquee-stats">
                     <p>

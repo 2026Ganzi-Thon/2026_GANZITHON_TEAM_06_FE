@@ -74,3 +74,8 @@ function guestHeaders ()
 
     return guestToken ? { 'X-Guest-Token': guestToken } : {};
 }
+
+export async function fetchTicketStats ()
+{
+    return apiFetch('/api/v1/tickets/stats');
+}
