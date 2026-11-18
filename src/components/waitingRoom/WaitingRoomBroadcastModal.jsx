@@ -4,26 +4,36 @@ import { MOOD_CHIPS } from '../../game/onboardingSession';
 import { fetchSituationChips } from '../../services/situationChips';
 import { buildBroadcastMessage } from '../../utils/buildBroadcastMessage';
 
-function BroadcastPreview ({ ticketNumber, situationLabel, moodLabel, hasMoodSelection, hasSituationSelection })
+function BroadcastPreview ({ ticketNumber, situationLabel, moodLabel })
 {
     const numberLabel = typeof ticketNumber === 'number' ? ticketNumber : '—';
 
     return (
         <p className="waiting-room-broadcast-preview">
-            안내 말씀 드립니다. {numberLabel}번{' '}
-            {hasMoodSelection ? (
-                <mark className="waiting-room-broadcast-highlight">{moodLabel}</mark>
-            ) : (
-                <span className="waiting-room-broadcast-placeholder">상태</span>
-            )}{' '}
-            양님이{' '}
-            {hasSituationSelection ? (
-                <mark className="waiting-room-broadcast-highlight">{situationLabel}</mark>
-            ) : (
-                <span className="waiting-room-broadcast-placeholder">상황</span>
-            )}
-            입니다.
+            안내 말씀 드립니다. {numberLabel}번 <mark className="waiting-room-broadcast-highlight">{moodLabel || '상태'}</mark> 양님이{'\n'}
+            <mark className="waiting-room-broadcast-highlight">{situationLabel || '상황'}</mark>입니다.
         </p>
+    );
+}
+
+// 선택 버튼. 이미지(off/on)가 배경이고 글자는 위에 올린다.
+function ChipButton ({ kind, label, selected, onClick })
+{
+    return (
+        <button
+            type="button"
+            className={`waiting-room-broadcast-chip waiting-room-broadcast-chip-${kind}`}
+            style={{ backgroundImage: `url(/assets/ui/waiting-room/${kind}-btn-${selected ? 'on' : 'off'}.png)` }}
+            aria-pressed={selected}
+            onClick={onClick}
+        >
+            {label}
+            {selected && (
+                <span className="waiting-room-broadcast-check">
+                    <img src="/assets/finish-waiting/check.png" alt="" />
+                </span>
+            )}
+        </button>
     );
 }
 
@@ -135,90 +145,66 @@ export default function WaitingRoomBroadcastModal ({
                 aria-labelledby="waiting-room-broadcast-title"
             >
                 <header className="waiting-room-broadcast-header">
-                    <h2 id="waiting-room-broadcast-title">안내방송 작성</h2>
-                    <p>방송은 전광판에 15초 동안 나와요.</p>
+                    <img src="/assets/ui/waiting-room/lamp.png" alt="" />
+                    <div>
+                        <h2 id="waiting-room-broadcast-title">안내방송 작성</h2>
+                        <p>방송은 전광판에 15초 동안 나와요.</p>
+                    </div>
                 </header>
 
-                <div className="waiting-room-broadcast-preview-box" aria-live="polite">
+                <div className="waiting-room-broadcast-box waiting-room-broadcast-preview-box" aria-live="polite">
                     <BroadcastPreview
                         ticketNumber={trip?.ticketNumber}
                         situationLabel={selectedSituationLabel}
                         moodLabel={selectedMoodLabel}
-                        hasMoodSelection={Boolean(selectedMood)}
-                        hasSituationSelection={Boolean(selectedSituationCode)}
                     />
                 </div>
 
-                {chipsLoading && <p className="waiting-room-broadcast-status">상황 칩을 불러오는 중이에요.</p>}
-                {chipsError && (
-                    <div className="waiting-room-broadcast-status waiting-room-broadcast-status-error">
-                        <p>{chipsError}</p>
-                        <button type="button" className="waiting-room-broadcast-retry" onClick={loadChips}>
-                            다시 시도
-                        </button>
-                    </div>
-                )}
-
-                {!chipsLoading && !chipsError && (
-                    <div className="waiting-room-broadcast-chips">
-                        <div className="waiting-room-broadcast-chips-column">
-                            <h3>상황</h3>
-                            <ul className="waiting-room-broadcast-chip-list">
-                                {situationChips.map((chip) => (
-                                    <li key={chip.situationChipCode}>
-                                        <button
-                                            type="button"
-                                            className={
-                                                chip.situationChipCode === selectedSituationCode
-                                                    ? 'waiting-room-broadcast-chip is-selected'
-                                                    : 'waiting-room-broadcast-chip'
-                                            }
-                                            aria-pressed={chip.situationChipCode === selectedSituationCode}
-                                            onClick={() => setSelectedSituationCode(chip.situationChipCode)}
-                                        >
-                                            {chip.label}
-                                        </button>
-                                    </li>
-                                ))}
-                            </ul>
+                <div className="waiting-room-broadcast-box waiting-room-broadcast-state-box">
+                    {chipsLoading && <p className="waiting-room-broadcast-status">상황 칩을 불러오는 중이에요.</p>}
+                    {chipsError && (
+                        <div className="waiting-room-broadcast-status waiting-room-broadcast-status-error">
+                            <p>{chipsError}</p>
+                            <button type="button" className="waiting-room-broadcast-retry" onClick={loadChips}>
+                                다시 시도
+                            </button>
                         </div>
-                        <div className="waiting-room-broadcast-chips-column">
-                            <h3>상태</h3>
-                            <ul className="waiting-room-broadcast-chip-grid">
-                                {MOOD_CHIPS.map((chip) => (
-                                    <li key={chip.id}>
-                                        <button
-                                            type="button"
-                                            className={
-                                                chip.id === selectedMood
-                                                    ? 'waiting-room-broadcast-chip is-selected'
-                                                    : 'waiting-room-broadcast-chip'
-                                            }
-                                            aria-pressed={chip.id === selectedMood}
-                                            onClick={() => setSelectedMood(chip.id)}
-                                        >
-                                            {chip.label}
-                                        </button>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    </div>
-                )}
+                    )}
+                    {!chipsLoading && !chipsError && situationChips.map((chip) => (
+                        <ChipButton
+                            key={chip.situationChipCode}
+                            kind="state"
+                            label={chip.label}
+                            selected={chip.situationChipCode === selectedSituationCode}
+                            onClick={() => setSelectedSituationCode(chip.situationChipCode)}
+                        />
+                    ))}
+                </div>
 
-                <footer className="waiting-room-broadcast-actions">
-                    <button type="button" className="waiting-room-broadcast-cancel" onClick={onClose}>
-                        취소
-                    </button>
-                    <button
-                        type="button"
-                        className="waiting-room-broadcast-send"
-                        disabled={!canSend}
-                        onClick={handleSend}
-                    >
-                        안내 방송 보내기
-                    </button>
-                </footer>
+                <div className="waiting-room-broadcast-box waiting-room-broadcast-emotion-box">
+                    {MOOD_CHIPS.map((chip) => (
+                        <ChipButton
+                            key={chip.id}
+                            kind="emotion"
+                            label={chip.label}
+                            selected={chip.id === selectedMood}
+                            onClick={() => setSelectedMood(chip.id)}
+                        />
+                    ))}
+                </div>
+
+                <button type="button" className="waiting-room-broadcast-cancel" onClick={onClose}>
+                    취소
+                </button>
+                <button
+                    type="button"
+                    className="waiting-room-broadcast-send"
+                    disabled={!canSend}
+                    onClick={handleSend}
+                >
+                    <img src="/assets/ui/waiting-room/announce-icon.png" alt="" />
+                    안내 방송 보내기
+                </button>
             </section>
         </div>
     );
