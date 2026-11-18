@@ -1,34 +1,94 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
-import PageLinks from '../components/common/PageLinks';
+import AppHeader from '../components/common/AppHeader';
+import WaitingRoomActionBar from '../components/waitingRoom/WaitingRoomActionBar';
+import WaitingRoomMarquee from '../components/waitingRoom/WaitingRoomMarquee';
+import WaitingRoomTopBar from '../components/waitingRoom/WaitingRoomTopBar';
 import { PhaserGame } from '../PhaserGame';
-import { EventBus } from '../game/EventBus';
-import { hasEnteredWaitingRoom } from '../game/waitingRoomEntry';
+import { readOnboardingTrip, ROOM_DESCRIPTIONS } from '../game/onboardingSession';
+import { fetchRoomStats } from '../services/waitingRoom';
 
-export default function WaitingRoomPage()
+export default function WaitingRoomPage ()
 {
-    const phaserRef = useRef(null);
-    const [isSeated, setIsSeated] = useState(hasEnteredWaitingRoom);
+    const trip = useMemo(() => readOnboardingTrip(), []);
+    const [stats, setStats] = useState({
+        waitingCount: 0,
+        arrivalCount: 0,
+        releasedCount: 0,
+        passedTrains: 0
+    });
+    const [statsLoading, setStatsLoading] = useState(Boolean(trip?.roomCode));
+
+    const roomName = trip?.displayName ?? null;
+    const roomSubtitle = trip?.roomCode ? ROOM_DESCRIPTIONS[trip.roomCode] : null;
 
     useEffect(() =>
     {
-        const handleSeated = () => setIsSeated(true);
+        if (!trip?.roomCode)
+        {
+            return;
+        }
 
-        EventBus.on('passenger-seated', handleSeated);
+        let cancelled = false;
+
+        const loadStats = async () =>
+        {
+            setStatsLoading(true);
+
+            try
+            {
+                const nextStats = await fetchRoomStats(trip.roomCode);
+
+                if (!cancelled)
+                {
+                    setStats(nextStats);
+                }
+            }
+            finally
+            {
+                if (!cancelled)
+                {
+                    setStatsLoading(false);
+                }
+            }
+        };
+
+        loadStats();
 
         return () =>
         {
-            EventBus.off('passenger-seated', handleSeated);
+            cancelled = true;
         };
-    }, []);
+    }, [trip?.roomCode]);
+
+    const handleEndWaiting = () =>
+    {
+        window.alert('기다림 마치기 화면은 준비 중이에요.');
+    };
+
+    const waitingCount = statsLoading ? null : stats.waitingCount;
 
     return (
-        <main>
-            <h1>대기실</h1>
-            <p className="waiting-room-board">잠시 정차합니다. 천천히 가도, 도착은 합니다.</p>
-            <PageLinks />
-            {isSeated && <p className="waiting-room-line">따뜻한 차 한 잔 놓아 둘게요.</p>}
-            <PhaserGame ref={phaserRef} />
+        <main className="waiting-room">
+            <AppHeader />
+            <div className="waiting-room-stage">
+                <PhaserGame />
+                <div className="waiting-room-overlay">
+                    <WaitingRoomTopBar
+                        roomName={roomName}
+                        roomSubtitle={roomSubtitle}
+                        waitingCount={waitingCount}
+                    />
+                    <WaitingRoomMarquee
+                        arrivalCount={statsLoading ? null : stats.arrivalCount}
+                        releasedCount={statsLoading ? null : stats.releasedCount}
+                    />
+                </div>
+                <WaitingRoomActionBar
+                    passedTrains={statsLoading ? null : stats.passedTrains}
+                    onEndWaiting={handleEndWaiting}
+                />
+            </div>
         </main>
     );
 }

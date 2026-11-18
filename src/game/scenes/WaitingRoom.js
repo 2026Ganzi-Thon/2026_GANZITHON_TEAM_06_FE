@@ -1,23 +1,24 @@
 import { Scene } from 'phaser';
 
 import { EventBus } from '../EventBus';
+import {
+    getPlayerSeatTexture,
+    PLAYER_BENCH_ANCHOR,
+    PLAYER_SEATED_DIRECTION,
+    WAITING_ROOM_BENCH_SLOTS,
+    WAITING_ROOM_BENCH_WIDTH_TEXTURE
+} from '../objects/waitingRoomBenches';
 import { markWaitingRoomEntered, shouldPlayWaitingRoomEntrance } from '../waitingRoomEntry';
 
-const TILE_SIZE = 32;
-const ROOM_WIDTH = 1024;
-const ROOM_HEIGHT = 768;
-const WALL_ROWS = 5;
-const ENTRANCE_WAIT_MS = 1200;
-const WALK_MS = 600;
+const ROOM_TEXTURE_WIDTH = 1442;
+const ROOM_TEXTURE_HEIGHT = 841;
+const WALK_MS = 1200;
+const SIT_MS = 1800;
+const TURN_MS = 450;
+const PLAYER_SEAT_WORLD_Y_NUDGE = 5;
 
-// 문은 아래 가운데. 빈 자리는 그 바로 왼쪽 앞줄이라 0.6초 이동이 짧다.
-const ENTRANCE = { x: 512, y: 700 };
-const SEAT = { x: 330, y: 670 };
-
-const WINDOW_POSITIONS = [150, 330, 512, 694, 874];
-const BENCH_COLUMNS = [170, 330, 694, 854];
-const BENCH_ROWS = [250, 390, 530, 670];
-const SEAT_DIRECTIONS = ['south', 'south-east', 'south-west', 'east', 'west'];
+// 확정 배경 기준 문·플레이어 착석 (좌측 앞 벤치)
+const ENTRANCE_TEXTURE = { x: 721, y: 755 };
 
 export class WaitingRoom extends Scene
 {
@@ -28,38 +29,198 @@ export class WaitingRoom extends Scene
 
     create ()
     {
-        this.createRoom();
-        this.createWindows();
-        this.createSeatedPassengers();
-        this.addBench(SEAT.x, SEAT.y);
+        this.roomImage = this.add.image(0, 0, 'waiting-room');
+        this.roomScale = 1;
+        this.roomOffsetX = 0;
+        this.roomOffsetY = 0;
+        this.benches = [];
+        this._atBenchSeat = false;
+
+        this.updateRoomLayout();
+        this.scale.on('resize', this.updateRoomLayout, this);
+
         this.createWalkAnimations();
+        this.createBenches();
+        this.spawnPlayer();
+        this.handleBenchLayoutRefresh = () => this.refreshBenchLayoutFromModule();
 
-        if (shouldPlayWaitingRoomEntrance())
-        {
-            this.player = this.add.sprite(ENTRANCE.x, ENTRANCE.y, 'walk-south-west-0');
-            this.player.setDepth(ENTRANCE.y);
-            this.time.delayedCall(ENTRANCE_WAIT_MS, () =>
-            {
-                if (!this.player?.active)
-                {
-                    return;
-                }
-
-                this.walkToSeat();
-            });
-        }
-        else
-        {
-            this.placeSeatedPlayer();
-        }
+        EventBus.on('refresh-waiting-room-bench-layout', this.handleBenchLayoutRefresh);
 
         EventBus.emit('current-scene-ready', this);
     }
 
-    placeSeatedPlayer ()
+    shutdown ()
     {
-        this.player = this.add.sprite(SEAT.x, SEAT.y, 'sit-south');
-        this.player.setDepth(SEAT.y);
+        if (this.handleBenchLayoutRefresh)
+        {
+            EventBus.off('refresh-waiting-room-bench-layout', this.handleBenchLayoutRefresh);
+        }
+
+        this.scale.off('resize', this.updateRoomLayout, this);
+    }
+
+    refreshBenchLayoutFromModule ()
+    {
+        import('../objects/waitingRoomBenches').then((mod) =>
+        {
+            this.layoutBenches(mod.WAITING_ROOM_BENCH_SLOTS);
+
+            if (!this.player?.active)
+            {
+                return;
+            }
+
+            const seat = this.getPlayerSeatWorld(mod.getPlayerSeatTexture);
+
+            this.player.setPosition(seat.x, seat.y);
+            this.syncPlayerDepth();
+        });
+    }
+
+    updateRoomLayout ()
+    {
+        const viewWidth = this.scale.width;
+        const viewHeight = this.scale.height;
+
+        this.roomScale = Math.max(
+            viewWidth / ROOM_TEXTURE_WIDTH,
+            viewHeight / ROOM_TEXTURE_HEIGHT
+        );
+
+        this.roomOffsetX = (viewWidth - ROOM_TEXTURE_WIDTH * this.roomScale) / 2;
+        this.roomOffsetY = (viewHeight - ROOM_TEXTURE_HEIGHT * this.roomScale) / 2;
+
+        this.roomImage.setOrigin(0.5);
+        this.roomImage.setScale(this.roomScale);
+        this.roomImage.setPosition(viewWidth / 2, viewHeight / 2);
+        this.roomImage.setDepth(0);
+
+        this.layoutBenches();
+
+        if (this.player?.active)
+        {
+            const seat = this.getPlayerSeatWorld();
+
+            this.player.setPosition(seat.x, seat.y);
+            this.syncPlayerDepth();
+        }
+    }
+
+    getPlayerSeatWorld (getSeatTexture = getPlayerSeatTexture)
+    {
+        const seatTexture = getSeatTexture();
+        const seat = this.textureToWorld(seatTexture.x, seatTexture.y);
+
+        seat.y += PLAYER_SEAT_WORLD_Y_NUDGE;
+
+        return seat;
+    }
+
+    createBenches ()
+    {
+        const benchTexture = this.textures.get('waiting-room-bench');
+        const source = benchTexture.getSourceImage();
+        const nativeWidth = source.width;
+
+        const scaleInTexture = WAITING_ROOM_BENCH_WIDTH_TEXTURE / nativeWidth;
+
+        WAITING_ROOM_BENCH_SLOTS.forEach(() =>
+        {
+            const bench = this.add.image(0, 0, 'waiting-room-bench');
+            bench.setOrigin(0.5, 1);
+            bench._textureScale = scaleInTexture;
+            this.benches.push(bench);
+        });
+
+        this.layoutBenches();
+    }
+
+    layoutBenches (slots = WAITING_ROOM_BENCH_SLOTS)
+    {
+        if (!this.benches.length)
+        {
+            return;
+        }
+
+        this.benches.forEach((bench, index) =>
+        {
+            const slot = slots[index];
+
+            if (!slot)
+            {
+                return;
+            }
+
+            const world = this.textureToWorld(slot.x, slot.y);
+            const displayScale = this.roomScale * bench._textureScale;
+
+            bench.setPosition(world.x, world.y);
+            bench.setScale(displayScale);
+            bench.setFlipX(Boolean(slot.flipX));
+            bench.setDepth(world.y - 1);
+        });
+    }
+
+    spawnPlayer ()
+    {
+        if (shouldPlayWaitingRoomEntrance())
+        {
+            const entrance = this.textureToWorld(ENTRANCE_TEXTURE.x, ENTRANCE_TEXTURE.y);
+
+            this.player = this.add.sprite(entrance.x, entrance.y, 'walk-south-west-0');
+            this.player.setOrigin(0.5, 1);
+            this.player.setDepth(entrance.y);
+            this.walkToSeat();
+        }
+        else
+        {
+            const seat = this.getPlayerSeatWorld();
+
+            this.placeSeatedPlayer(seat.x, seat.y);
+        }
+    }
+
+    textureToWorld (textureX, textureY)
+    {
+        return {
+            x: this.roomOffsetX + textureX * this.roomScale,
+            y: this.roomOffsetY + textureY * this.roomScale
+        };
+    }
+
+    getSeatedPlayerDepth ()
+    {
+        // 벤치 depth(world.y - 1)보다 앞에 그리기
+        const benchFoot = this.textureToWorld(PLAYER_BENCH_ANCHOR.x, PLAYER_BENCH_ANCHOR.y);
+
+        return benchFoot.y + 1;
+    }
+
+    syncPlayerDepth ()
+    {
+        if (!this.player?.active)
+        {
+            return;
+        }
+
+        const isSeated = this.player.texture?.key?.startsWith('sit-');
+
+        if (isSeated || this._atBenchSeat)
+        {
+            this.player.setDepth(this.getSeatedPlayerDepth());
+        }
+        else
+        {
+            this.player.setDepth(this.player.y);
+        }
+    }
+
+    placeSeatedPlayer (x, y)
+    {
+        this._atBenchSeat = true;
+        this.player = this.add.sprite(x, y, `sit-${PLAYER_SEATED_DIRECTION}`);
+        this.player.setOrigin(0.5, 1);
+        this.syncPlayerDepth();
     }
 
     createWalkAnimations ()
@@ -82,86 +243,66 @@ export class WaitingRoom extends Scene
 
     walkToSeat ()
     {
+        const seat = this.getPlayerSeatWorld();
+
+        this._atBenchSeat = false;
+        this.player.setOrigin(0.5, 1);
         this.player.play('walk-south-west');
         this.tweens.add({
             targets: this.player,
-            x: SEAT.x,
-            y: SEAT.y,
+            x: seat.x,
+            y: seat.y,
             duration: WALK_MS,
-            onUpdate: () => this.player.setDepth(this.player.y),
-            onComplete: () => this.sitDown()
+            onUpdate: () => this.syncPlayerDepth(),
+            onComplete: () => this.finishSitting(seat.x, seat.y)
         });
     }
 
-    sitDown ()
+    finishSitting (x, y)
     {
         if (!this.player?.active)
         {
             return;
         }
 
+        this._atBenchSeat = true;
+        this.syncPlayerDepth();
         this.player.stop();
-        this.player.setTexture('sit-south');
-        this.player.setDepth(SEAT.y);
-        markWaitingRoomEntered();
-        EventBus.emit('passenger-seated');
-    }
+        // 멈춘 뒤 우측 아래로 몸 돌림
+        this.player.setTexture(`walk-${PLAYER_SEATED_DIRECTION}-0`);
 
-    createRoom ()
-    {
-        const columns = ROOM_WIDTH / TILE_SIZE;
-        const rows = ROOM_HEIGHT / TILE_SIZE;
-
-        for (let row = 0; row < rows; row += 1)
+        this.time.delayedCall(TURN_MS, () =>
         {
-            for (let column = 0; column < columns; column += 1)
+            if (!this.player?.active)
             {
-                const texture = row < WALL_ROWS ? 'wall' : 'floor';
-
-                this.add.image(
-                    column * TILE_SIZE + TILE_SIZE / 2,
-                    row * TILE_SIZE + TILE_SIZE / 2,
-                    texture
-                ).setDepth(0);
+                return;
             }
-        }
-    }
 
-    createWindows ()
-    {
-        WINDOW_POSITIONS.forEach((x) =>
-        {
-            this.add.image(x, 78, 'window').setDepth(1);
-        });
-    }
+            this.player.setTexture(`sit-${PLAYER_SEATED_DIRECTION}`);
+            this.player.setOrigin(0.5, 1);
+            this.player.setPosition(x, y);
+            this.syncPlayerDepth();
 
-    createSeatedPassengers ()
-    {
-        let directionIndex = 0;
+            const sitHoldMs = Math.max(0, SIT_MS - TURN_MS);
 
-        BENCH_ROWS.forEach((y) =>
-        {
-            BENCH_COLUMNS.forEach((x) =>
+            this.time.delayedCall(sitHoldMs, () =>
             {
-                if (x === SEAT.x && y === SEAT.y)
+                if (!this.player?.active)
                 {
                     return;
                 }
 
-                this.addBench(x, y);
-                const direction = SEAT_DIRECTIONS[directionIndex % SEAT_DIRECTIONS.length];
-                const sheep = this.add.sprite(x, y - 16, `sit-${direction}`);
-
-                sheep.setDepth(y);
-                directionIndex += 1;
+                markWaitingRoomEntered();
+                EventBus.emit('passenger-seated');
             });
         });
     }
+}
 
-    addBench (x, y)
+if (import.meta.hot)
+{
+    import.meta.hot.accept('../objects/waitingRoomBenches', () =>
     {
-        const bench = this.add.image(x, y, 'bench');
-
-        bench.setDepth(y - 1);
-    }
+        EventBus.emit('refresh-waiting-room-bench-layout');
+    });
 }

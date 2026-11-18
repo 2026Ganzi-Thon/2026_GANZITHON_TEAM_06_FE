@@ -4,16 +4,14 @@ import { Boot } from './scenes/Boot';
 import { Preloader } from './scenes/Preloader';
 import { WaitingRoom } from './scenes/WaitingRoom';
 
-// Find out more information about the Game Config at:
-// https://docs.phaser.io/api-documentation/typedef/types-core#gameconfig
 const config = {
     type: AUTO,
-    width: 1024,
-    height: 768,
+    width: 1442,
+    height: 841,
     parent: 'game-container',
-    backgroundColor: '#028af8',
+    backgroundColor: '#3d2a24',
     scale: {
-        mode: Scale.FIT,
+        mode: Scale.RESIZE,
         autoCenter: Scale.CENTER_BOTH
     },
     scene: [
@@ -23,10 +21,6 @@ const config = {
     ]
 };
 
-const StartGame = (parent) => {
-
-    return new Game({ ...config, parent });
-
-}
+const StartGame = (parent) => new Game({ ...config, parent });
 
 export default StartGame;
