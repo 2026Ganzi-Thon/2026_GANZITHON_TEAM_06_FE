@@ -182,6 +182,9 @@ export class WaitingRoom extends Scene
         };
         EventBus.on('wool-reset', this.handleWoolReset);
 
+        // 씬이 꺼질 때 EventBus 구독을 풀어 준다. (연결하지 않으면 씬이 다시 만들어진 뒤에도 옛 씬이 이벤트를 받아 'sys' 오류가 난다)
+        this.events.once('shutdown', this.shutdown, this);
+
         EventBus.emit('current-scene-ready', this);
     }
 

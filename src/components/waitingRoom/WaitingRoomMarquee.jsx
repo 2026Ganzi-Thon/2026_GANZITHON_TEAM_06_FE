@@ -28,7 +28,10 @@ export default function WaitingRoomMarquee ({
             />
             <div className="waiting-room-marquee-body">
                 <div className="waiting-room-marquee-message-wrap">
-                    <span className="waiting-room-marquee-train-icon" aria-hidden="true" />
+                    <span
+                        className={isBroadcasting ? 'waiting-room-marquee-train-icon is-broadcasting' : 'waiting-room-marquee-train-icon'}
+                        aria-hidden="true"
+                    />
                     {showDefaultMessage ? (
                         <p className="waiting-room-marquee-message">
                             열차는 30분에 한 번 지나가요.
@@ -37,7 +40,7 @@ export default function WaitingRoomMarquee ({
                         </p>
                     ) : (
                         <p className="waiting-room-marquee-message waiting-room-marquee-message-broadcast">
-                            {broadcastMessage}
+                            {broadcastMessage.replace('양님이 ', '양님이\n')}
                         </p>
                     )}
                 </div>

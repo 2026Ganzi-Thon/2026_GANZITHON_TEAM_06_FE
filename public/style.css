@@ -276,6 +276,89 @@ main.onboarding-ticket {
     text-align: center;
 }
 
+/* 모바일(세로·가로): 안전 안내 패널은 3:2 비율을 풀고 내용 높이에 맞춘다. 항목은 아이콘·글 한 줄 + 전화 버튼 한 줄로 쌓고, 높이가 모자라면 안에서 스크롤한다 */
+@media (max-width: 640px), (max-height: 500px) {
+    .safety-panel-card {
+        width: min(94vw, 720px);
+        max-height: 92dvh;
+        aspect-ratio: auto;
+        display: flex; /* 제목은 고정하고 항목 목록만 패널 안에서 스크롤 */
+        flex-direction: column;
+        overflow: hidden;
+        padding: 30px 7% 34px; /* 바를 아래로 내리고, 목록이 패널 테두리 밖으로 나가지 않게 여백을 둔다 */
+    }
+
+    .safety-panel-bar {
+        flex: none;
+        margin: 0 auto 6px;
+    }
+
+    .safety-panel-card h2,
+    .safety-panel-card > p {
+        flex: none;
+    }
+
+    .safety-panel-card h2 {
+        margin-bottom: 2px;
+        font-size: 17px;
+    }
+
+    .safety-panel-card > p {
+        margin-bottom: 8px;
+        font-size: 11px;
+    }
+
+    .safety-panel-card ul {
+        gap: 6px;
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+    }
+
+    .safety-panel-card li {
+        flex-wrap: nowrap; /* 아이콘 · 글 · 전화 버튼을 한 줄에 */
+        gap: 8px;
+        padding: 6px 10px;
+        border-radius: 12px;
+    }
+
+    .safety-panel-card li > img {
+        width: 30px;
+        height: auto;
+    }
+
+    .safety-panel-line {
+        flex-wrap: wrap;
+        gap: 2px 6px;
+        font-size: 13px;
+    }
+
+    .safety-panel-number,
+    .safety-panel-sub {
+        font-size: 11px;
+    }
+
+    .safety-panel-call {
+        flex: none;
+        width: 92px;
+        height: 30px;
+        padding-left: 6px;
+        font-size: 11px;
+    }
+
+    .safety-panel-call img {
+        width: 14px;
+        height: auto;
+    }
+}
+
+/* 모바일 세로: 패널을 조금 더 높게 */
+@media (max-width: 640px) and (orientation: portrait) {
+    .safety-panel-card {
+        min-height: 62dvh;
+    }
+}
+
 section.onboarding-status,
 .onboarding-error {
     max-width: 720px;
@@ -294,6 +377,8 @@ section.onboarding-start {
     align-items: center;
     gap: var(--space-md);
     padding: 48px var(--space-md);
+    position: sticky; /* 스크롤해도 제목·부제목·버튼이 화면 위쪽에 같이 따라온다 */
+    top: 0;
 }
 
 /* 승차권이 화면 가운데에 오도록: 위(안내 글)·가운데(승차권)·아래(버튼)를 세 줄로 나누고 위·아래 줄이 같은 높이를 갖게 한다 */
@@ -344,6 +429,7 @@ section.onboarding-start {
 
     .ticket-step-top,
     .ticket-step-bottom {
+        align-self: center; /* 세 줄 배치용 end/start 정렬이 세로 쌓기에서는 좌우로 쏠리게 하므로 가운데로 */
         padding: 0;
     }
 }
@@ -484,6 +570,21 @@ section.onboarding-start {
 .onboarding-choices li:nth-child(2) { animation-delay: 0.12s; }
 .onboarding-choices li:nth-child(3) { animation-delay: 0.24s; }
 
+/* 대기실 선택 버튼의 번호 사각형: 기다림 마치기 화면보다 조금 작게 */
+.onboarding-choices .finish-waiting-num {
+    width: 34px;
+    height: 34px;
+    font-size: 13px;
+}
+
+@media (max-width: 768px) {
+    .onboarding-choices .finish-waiting-num {
+        width: 26px;
+        height: 26px;
+        font-size: 11px;
+    }
+}
+
 .onboarding-choices button {
     transition: transform 0.2s ease;
 }
@@ -615,6 +716,33 @@ section.onboarding-start {
     pointer-events: auto;
 }
 
+/* 모바일 세로: 패널 폭에 맞춰 다음·건너뛰기 버튼을 줄이고, 건너뛰기는 다음 버튼 왼쪽(같은 줄)에 둬 패널 밖으로 넘치지 않게 한다 */
+.onboarding-chat .finish-waiting-panel {
+    container-type: inline-size;
+}
+
+@media (max-width: 640px) and (orientation: portrait) {
+    .onboarding-chat .finish-waiting-next img,
+    .onboarding-chat .finish-waiting-extra-btn {
+        width: 20cqw;
+        height: 6.7cqw;
+    }
+
+    .onboarding-chat .finish-waiting-extra {
+        right: calc(9% + 22cqw);
+        top: 23%;
+        transform: translateY(-50%);
+    }
+
+    .onboarding-chat .finish-waiting-extra-btn {
+        font-size: 2.8cqw;
+    }
+
+    .onboarding-chat .finish-waiting-message {
+        font-size: 3cqw;
+    }
+}
+
 .onboarding-chat .finish-waiting-panel.is-closing {
     pointer-events: none;
 }
@@ -622,6 +750,110 @@ section.onboarding-start {
 .onboarding-chat .finish-waiting-panel {
     margin-top: 0;
     margin-bottom: 0;
+}
+
+/* 모바일 가로 화면(높이가 낮은 화면): 크기를 화면 높이(vh) 기준으로 줄여 비율을 유지하고 한 화면에 담는다 */
+@media (orientation: landscape) and (max-height: 500px) {
+    section.onboarding-start {
+        gap: 2vh;
+        padding: 3vh var(--space-md);
+    }
+
+    .onboarding-title {
+        width: auto;
+        max-width: 100%;
+        max-height: 36vh;
+    }
+
+    .onboarding-subtitle {
+        width: auto;
+        max-width: 100%;
+        max-height: 8vh;
+    }
+
+    .onboarding-pill {
+        padding: 1.5vh 24px;
+    }
+
+    .onboarding-broadcast {
+        margin: 3vh auto 2vh;
+        padding: 1.5vh 22px;
+        font-size: 13px;
+    }
+
+    .onboarding .onboarding-choices,
+    .onboarding .onboarding-chips {
+        margin-top: 2vh;
+        margin-bottom: 0;
+        gap: 1.5vh;
+    }
+
+    .onboarding .onboarding-choices {
+        --finish-waiting-btn-height: 14vh;
+        --finish-waiting-btn-padding: 14px;
+        max-width: min(632px, 120vh);
+    }
+
+    .onboarding .onboarding-chips {
+        margin-top: 4vh;
+        max-width: min(1000px, 200vh);
+    }
+
+    .onboarding .onboarding-chip {
+        height: 11vh;
+        aspect-ratio: auto;
+        font-size: 13px;
+    }
+
+    /* 대화창: 비율(985 x 207)은 그대로, 폭을 높이 기준으로 줄이고 글자도 같이 줄인다 */
+    .onboarding-chat {
+        --finish-waiting-panel-width: 110vh;
+
+        top: auto;
+        bottom: 2vh;
+        transform: none;
+    }
+
+    .onboarding-chat .finish-waiting-message {
+        font-size: 2.4vh;
+    }
+
+    .onboarding-chat .finish-waiting-next img,
+    .onboarding-chat .finish-waiting-extra-btn {
+        width: 14vh;
+        height: 4.7vh;
+    }
+
+    .onboarding-chat .finish-waiting-extra,
+    .onboarding-chat .finish-waiting-extra-btn {
+        font-size: 1.8vh;
+    }
+
+    .onboarding-chat .finish-waiting-extra {
+        top: calc(23% + 2.4vh + 4px);
+    }
+
+    .ticket-step {
+        gap: 1.5vh;
+        padding: 2vh var(--space-md);
+    }
+
+    .ticket-step .ticket-sparkle {
+        width: 13vh;
+    }
+
+    .ticket-step .ticket-caption {
+        font-size: 16px;
+    }
+
+    .ticket-step .ticket {
+        width: min(100%, 560px, 90vh); /* 승차권(2492 x 1040)의 높이가 화면 높이의 약 36%가 되게 */
+    }
+
+    .ticket-step .ticket-pill {
+        min-width: 0;
+        padding: 1.5vh 28px;
+    }
 }
 
 .ticket {
@@ -1070,7 +1302,7 @@ body:has(main.waiting-room) {
     --finish-waiting-panel-width: 760px;
 
     position: absolute;
-    bottom: clamp(72px, 9cqw, 110px);
+    bottom: clamp(16px, 2cqw, 28px);
     left: 0;
     right: 0;
     z-index: 5;
@@ -1078,6 +1310,17 @@ body:has(main.waiting-room) {
 
 .waiting-room-train-chat .finish-waiting-panel {
     margin-bottom: 0;
+}
+
+/* 모바일 가로: 대화창이 화면을 가리지 않게 폭(높이 기준)과 글자를 줄인다 */
+@media (orientation: landscape) and (max-height: 500px) {
+    .waiting-room-train-chat {
+        --finish-waiting-panel-width: 110vh;
+    }
+
+    .waiting-room-train-chat .finish-waiting-message {
+        font-size: 2.4vh;
+    }
 }
 
 .wool-panel-header {
@@ -1390,7 +1633,7 @@ body:has(main.waiting-room) {
     }
 
     .waiting-room .waiting-room-top-copy p {
-        font-size: 10px;
+        font-size: 9px;
     }
 
     .waiting-room .waiting-room-marquee-message {
@@ -1466,7 +1709,7 @@ body:has(main.waiting-room) {
     }
 
     .waiting-room .waiting-room-top-copy p {
-        font-size: 8px;
+        font-size: 7px;
     }
 
     /* 좁은 상단바에서 '현재 대기 N명'이 칸을 넘지 않게 한다 */
@@ -1555,7 +1798,7 @@ body:has(main.waiting-room) {
     }
 
     .waiting-room .waiting-room-top-copy p {
-        font-size: 8px;
+        font-size: 7px;
     }
 }
 
@@ -1650,6 +1893,8 @@ body:has(main.waiting-room) {
 
 .waiting-room-top-copy p {
     margin: 0.1cqw 0 0;
+    word-break: keep-all; /* 방 설명이 상단바 밖으로 벗어나지 않게 칸 안에서 줄바꿈 */
+    overflow-wrap: anywhere;
     font-size: 0.68cqw;
     line-height: 1.25;
     color: var(--color-brown-text);
@@ -1905,6 +2150,43 @@ body:has(main.waiting-room) {
 .waiting-room-broadcast:disabled {
     cursor: not-allowed;
     opacity: 0.72;
+}
+
+.waiting-room-broadcast {
+    position: relative;
+}
+
+/* 쿨타임 중에는 꺼진 버튼 이미지 위에 남은 시간을 가운데로 올린다 */
+.waiting-room-broadcast:disabled:has(.waiting-room-broadcast-cooldown) {
+    opacity: 1;
+}
+
+.waiting-room-broadcast-cooldown {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding-left: 8%; /* 글자를 살짝 오른쪽으로 */
+    font-size: clamp(10px, 1.2cqw, 14px);
+    font-weight: 700;
+    color: #fff;
+    white-space: nowrap;
+}
+
+/* 꺼진 버튼 이미지(220x53)는 켜진 버튼과 비율이 달라 더 넓게, 자기 비율대로 그린다 */
+.waiting-room-broadcast img.is-off {
+    width: 18cqw;
+    max-width: 210px;
+    min-width: 150px;
+    aspect-ratio: 220 / 53;
+}
+
+/* 모바일(세로·가로): 꺼진 버튼 폭을 조금 줄인다 */
+@media (max-width: 640px), (max-height: 500px) {
+    .waiting-room-broadcast img.is-off {
+        width: 15cqw;
+        min-width: 120px;
+    }
 }
 
 .waiting-room-broadcast img,

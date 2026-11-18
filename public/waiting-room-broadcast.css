@@ -19,67 +19,94 @@
     cursor: pointer;
 }
 
+/* panel-long.png는 털실 톡톡(.wool-panel)과 같은 크기·여백으로 쓴다. */
 .waiting-room-broadcast-panel {
     position: relative;
     z-index: 1;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-md);
-    width: min(94%, 560px);
-    max-height: min(92%, 640px);
-    margin: 0;
-    padding: var(--space-md) var(--space-lg);
-    overflow: auto;
-    border: 3px solid #d9b89a;
-    border-radius: 12px;
-    background: #fff8ef;
-    box-shadow: 0 12px 32px rgb(62 42 34 / 28%);
     box-sizing: border-box;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto 1fr auto;
+    gap: var(--space-sm) var(--space-md);
+    width: min(96vw, 125vh, 1000px);
+    aspect-ratio: 3 / 2;
+    margin: 0;
+    padding: 3.8% 6% 5.2%;
+    background: url('/assets/common/panel-long.png') center / 100% 100% no-repeat;
+}
+
+.waiting-room-broadcast-header {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: var(--space-sm);
+    align-items: center;
+}
+
+.waiting-room-broadcast-header img {
+    width: 37px;
+    height: 56px;
 }
 
 .waiting-room-broadcast-header h2 {
     margin: 0;
-    font-size: 1.15rem;
-    color: var(--color-ink);
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--color-brown-title);
 }
 
 .waiting-room-broadcast-header p {
-    margin: 0.35rem 0 0;
-    font-size: 0.85rem;
+    margin: 4px 0 0;
+    font-size: 16px;
+    font-weight: 400;
     color: var(--color-brown-text);
 }
 
+.waiting-room-broadcast-box {
+    box-sizing: border-box;
+    min-height: 0;
+    padding: var(--space-sm) 8px;
+    overflow-y: auto;
+    border: 2px solid var(--color-brown-stroke);
+    border-radius: 16px;
+    background: var(--color-fill);
+}
+
 .waiting-room-broadcast-preview-box {
-    padding: var(--space-sm) var(--space-md);
-    border: 2px dashed #e0c4ad;
-    border-radius: 8px;
-    background: #fff;
+    grid-column: 1 / -1;
+    padding: 6px var(--space-md);
 }
 
 .waiting-room-broadcast-preview {
     margin: 0;
-    font-size: 0.92rem;
-    line-height: 1.55;
-    color: var(--color-ink);
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.35;
+    color: var(--color-brown-stroke);
+    white-space: pre-line;
     word-break: keep-all;
 }
 
 .waiting-room-broadcast-highlight {
-    padding: 0 0.15em;
-    border-radius: 4px;
-    background: #ffd4e0;
-    color: #8b3d52;
-    font-weight: 700;
+    background: #ffc3b7;
+    color: inherit;
 }
 
-.waiting-room-broadcast-placeholder {
-    color: var(--color-brown-text);
-    opacity: 0.65;
+.waiting-room-broadcast-state-box {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.waiting-room-broadcast-emotion-box {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    align-content: start;
 }
 
 .waiting-room-broadcast-status {
     margin: 0;
-    font-size: 0.88rem;
+    font-size: 14px;
     color: var(--color-brown-text);
 }
 
@@ -89,96 +116,82 @@
 }
 
 .waiting-room-broadcast-retry {
-    padding: var(--space-xs) var(--space-sm);
-    border: 1px solid #c9a88a;
+    padding: 4px var(--space-sm);
+    border: 1px solid var(--color-brown-stroke);
     border-radius: 6px;
     background: #fff;
     color: var(--color-ink);
     cursor: pointer;
 }
 
-.waiting-room-broadcast-chips {
-    display: grid;
-    grid-template-columns: 1fr 1.1fr;
-    gap: var(--space-md);
-}
-
-.waiting-room-broadcast-chips-column h3 {
-    margin: 0 0 var(--space-sm);
-    font-size: 0.82rem;
-    font-weight: 700;
-    color: var(--color-brown-text);
-}
-
-.waiting-room-broadcast-chip-list,
-.waiting-room-broadcast-chip-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.45rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-
-.waiting-room-broadcast-chip-list {
-    flex-direction: column;
-    align-items: stretch;
-}
-
 .waiting-room-broadcast-chip {
-    padding: 0.45rem 0.65rem;
-    border: 2px solid #e0c9b4;
-    border-radius: 8px;
-    background: #fff;
-    font-size: 0.82rem;
-    line-height: 1.35;
+    position: relative;
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    height: 34px;
+    padding: 0;
+    border: 0;
+    background: center / 100% 100% no-repeat;
+    font-size: 16px;
+    font-weight: 700;
     color: var(--color-ink);
-    text-align: left;
     cursor: pointer;
 }
 
-.waiting-room-broadcast-chip-list .waiting-room-broadcast-chip {
-    width: 100%;
+.waiting-room-broadcast-chip[aria-pressed='true'] {
+    color: #fff;
 }
 
-.waiting-room-broadcast-chip.is-selected {
-    border-color: #e891a8;
-    background: #ffe8ef;
-    font-weight: 600;
+.waiting-room-broadcast-chip-state {
+    justify-content: flex-start;
+    padding-left: var(--space-md);
 }
 
-.waiting-room-broadcast-actions {
-    display: flex;
-    gap: var(--space-sm);
-    justify-content: flex-end;
-    margin-top: auto;
+.waiting-room-broadcast-check {
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    translate: 0 -50%;
+    border-radius: 50%;
+    background: #fff;
 }
 
 .waiting-room-broadcast-cancel,
 .waiting-room-broadcast-send {
-    padding: 0.55rem 1rem;
-    border-radius: 8px;
-    font-size: 0.88rem;
-    font-weight: 600;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    justify-content: center;
+    height: 46px;
+    border-radius: 16px;
+    font-size: 16px;
+    font-weight: 700;
     cursor: pointer;
 }
 
 .waiting-room-broadcast-cancel {
-    border: 2px solid #d9b89a;
-    background: #fff;
-    color: var(--color-brown-text);
+    justify-self: end;
+    width: 40%;
+    border: 2px solid var(--color-brown-stroke);
+    background: #fcefde;
+    color: var(--color-brown-stroke);
 }
 
 .waiting-room-broadcast-send {
-    border: 2px solid #c96d88;
-    background: #e891a8;
+    border: 0;
+    border-radius: 12px;
+    background: var(--color-coral);
     color: #fff;
 }
 
 .waiting-room-broadcast-send:disabled {
-    border-color: #dcc4b5;
-    background: #f0e4da;
-    color: #a8988e;
+    opacity: 0.5;
     cursor: not-allowed;
 }
 
@@ -255,19 +268,237 @@
     cursor: default;
 }
 
-.waiting-room-marquee-message-broadcast {
-    font-size: 0.72cqw;
+/* 17px는 PC 크기: styles.css의 모바일 글자 크기(9~10px)를 덮어쓰지 않게 큰 화면에서만 적용한다 */
+@media (min-width: 901px) and (min-height: 521px) {
+    .waiting-room .waiting-room-marquee-message,
+    .waiting-room .waiting-room-marquee-message-broadcast {
+        font-size: 17px;
+    }
+}
+
+.waiting-room .waiting-room-marquee-message {
+    font-weight: 700;
+}
+
+.waiting-room .waiting-room-marquee-message-broadcast {
+    min-width: 0;
+    font-weight: 700;
     line-height: 1.28;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+}
+
+.waiting-room .waiting-room-marquee-train-icon.is-broadcasting {
+    background-image: url('/assets/ui/waiting-room/broadcasting.png');
 }
 
 @media (max-width: 640px) {
-    .waiting-room-broadcast-chips {
-        grid-template-columns: 1fr;
+    .waiting-room-broadcast-panel {
+        width: 94vw;
+        height: min(86svh, 680px);
+        aspect-ratio: auto;
+        padding: 28px 20px;
+        overflow-y: auto;
+        border: 36px solid transparent;
+        border-image: url('/assets/common/panel-long.png') 450 fill / 36px stretch;
+        background: none;
+    }
+}
+
+/* 작은 화면(모바일 세로·가로): 패널이 줄어드는 만큼 안의 글자·버튼도 줄여 칸을 넘지 않게 한다 */
+.waiting-room-broadcast-panel {
+    container-type: inline-size;
+}
+
+@container (max-width: 700px) {
+    .waiting-room-broadcast-header img {
+        width: 26px;
+        height: 39px;
+    }
+
+    .waiting-room-broadcast-header h2 {
+        font-size: 16px;
+    }
+
+    .waiting-room-broadcast-header p {
+        margin-top: 2px;
+        font-size: 11px;
+    }
+
+    .waiting-room-broadcast-box {
+        padding: 4px;
+        border-radius: 10px;
+    }
+
+    .waiting-room-broadcast-preview-box {
+        padding: 4px 8px;
+    }
+
+    .waiting-room-broadcast-preview {
+        font-size: 12px;
+    }
+
+    .waiting-room-broadcast-status {
+        font-size: 11px;
+    }
+
+    .waiting-room-broadcast-chip {
+        height: 26px;
+        font-size: 11px;
+    }
+
+    .waiting-room-broadcast-chip-state {
+        padding-left: 8px;
+    }
+
+    .waiting-room-broadcast-check {
+        right: 6px;
+        width: 16px;
+        height: 16px;
+    }
+
+    .waiting-room-broadcast-check img {
+        width: 8px;
+        height: 8px;
+    }
+
+    .waiting-room-broadcast-cancel,
+    .waiting-room-broadcast-send {
+        height: 32px;
+        border-radius: 10px;
+        font-size: 12px;
+    }
+
+    .waiting-room-broadcast-send img {
+        width: 16px;
+        height: auto;
+    }
+}
+
+/* 모바일 세로: 상황(state)이 위, 감정(emotion)이 그 아래에 한 줄씩 가득 차게 쌓는다 */
+@media (max-width: 640px) and (orientation: portrait) {
+    .waiting-room-broadcast-panel {
+        grid-template-rows: auto auto 1fr auto auto;
+        grid-template-columns: 1fr 2fr; /* 아래 줄: 취소는 좁게, 안내 방송 보내기는 넓게 */
+    }
+
+    .waiting-room-broadcast-cancel {
+        width: 100%;
+    }
+
+    .waiting-room-broadcast-state-box,
+    .waiting-room-broadcast-emotion-box {
+        grid-column: 1 / -1;
+    }
+}
+
+/* 모바일 가로: 패널은 왼쪽에 두고, 그 오른쪽 밖에 상황(state), 다시 그 오른쪽에 감정(emotion) 선택을 나란히 놓는다 */
+@media (orientation: landscape) and (max-height: 500px) {
+    .waiting-room-broadcast-modal {
+        justify-content: flex-start;
+        padding-left: 8px;
     }
 
     .waiting-room-broadcast-panel {
-        width: 100%;
-        max-height: 88%;
-        padding: var(--space-md);
+        --broadcast-panel-width: min(96vw, 100vh); /* 패널을 줄여 옆 선택 박스에 자리를 준다 */
+        --broadcast-side-width: calc((100vw - var(--broadcast-panel-width) - 32px) / 2);
+
+        width: var(--broadcast-panel-width);
+    }
+
+    .waiting-room-broadcast-state-box,
+    .waiting-room-broadcast-emotion-box {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: var(--broadcast-side-width);
+        padding: 10px; /* 선택 칸이 박스 가장자리에 붙지 않게 여백을 둔다 */
+    }
+
+    .waiting-room-broadcast-state-box {
+        left: calc(100% + 8px);
+    }
+
+    .waiting-room-broadcast-chip-state {
+        font-size: 10px; /* 상황 문구는 칸 안에 여유 있게 들어가도록 조금 줄인다 */
+    }
+
+    .waiting-room-broadcast-emotion-box {
+        left: calc(100% + 16px + var(--broadcast-side-width));
+        grid-template-columns: 1fr;
+    }
+}
+
+/* 모바일: 안내방송이 나오는 동안은 도착·내려놓음 통계를 감추고 문구가 전광판 폭 전체를 쓰게 해 전광판 밖으로 넘치지 않게 한다 */
+@media (max-width: 900px), (max-height: 520px) {
+    .waiting-room .waiting-room-marquee-body:has(.waiting-room-marquee-message-broadcast) .waiting-room-marquee-stats {
+        display: none;
+    }
+
+    .waiting-room .waiting-room-marquee-body:has(.waiting-room-marquee-message-broadcast) .waiting-room-marquee-message-wrap {
+        max-width: 100%;
+    }
+
+    .waiting-room .waiting-room-marquee-message-broadcast {
+        font-size: 8px;
+        line-height: 1.2;
+        word-break: keep-all;
+    }
+}
+
+/* 패널 펼쳐짐 + 버튼 클릭 애니메이션 */
+.waiting-room-broadcast-backdrop {
+    animation: broadcast-fade-in 0.2s ease-out;
+}
+
+.waiting-room-broadcast-panel {
+    animation: broadcast-panel-open 0.35s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+.waiting-room-broadcast-chip,
+.waiting-room-broadcast-cancel,
+.waiting-room-broadcast-send {
+    transition: transform 0.12s ease-out, filter 0.12s;
+}
+
+.waiting-room-broadcast-chip:active,
+.waiting-room-broadcast-cancel:active,
+.waiting-room-broadcast-send:not(:disabled):active {
+    transform: scale(0.95);
+}
+
+.waiting-room-broadcast-chip[aria-pressed='true'] {
+    animation: broadcast-chip-pop 0.25s ease-out;
+}
+
+.waiting-room-broadcast-check {
+    animation: broadcast-check-pop 0.3s cubic-bezier(0.34, 1.8, 0.64, 1);
+}
+
+@keyframes broadcast-fade-in {
+    from { opacity: 0; }
+}
+
+@keyframes broadcast-panel-open {
+    from {
+        opacity: 0;
+        transform: translateY(16px) scale(0.85);
+    }
+}
+
+@keyframes broadcast-chip-pop {
+    50% { transform: scale(1.05); }
+}
+
+@keyframes broadcast-check-pop {
+    from { transform: scale(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .waiting-room-broadcast-backdrop,
+    .waiting-room-broadcast-panel,
+    .waiting-room-broadcast-chip,
+    .waiting-room-broadcast-check {
+        animation: none;
     }
 }
