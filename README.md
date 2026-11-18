@@ -27,7 +27,6 @@ npm run dev
 |---|---|
 | `/` | 온보딩 |
 | `/waiting-room` | 대기실. Phaser가 여기에만 붙습니다 |
-| `/collection` | 털실 |
 | `/my-sheep` | 마이 양 |
 
 주소로 직접 들어가거나 새로고침해도 같은 화면이 열립니다.

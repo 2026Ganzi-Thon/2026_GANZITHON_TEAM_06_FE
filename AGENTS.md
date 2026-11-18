@@ -32,7 +32,6 @@ npm run build            # 빌드가 깨지지 않는지 확인
 |---|---|
 | `/` | 온보딩 |
 | `/waiting-room` | 대기실 (Phaser는 여기에만 붙는다) |
-| `/collection` | 털실 |
 | `/my-sheep` | 마이 양 |
 | `/my-sheep/piece/:pieceId` | 조각 상세 |
 | `/finish-waiting` | 기다림 마치기 |
@@ -44,7 +43,7 @@ src/
 ├─ main.jsx, App.jsx    # 진입점, 라우팅
 ├─ PhaserGame.jsx       # React ↔ Phaser 연결 컴포넌트
 ├─ pages/               # 라우트 단위 페이지
-├─ components/          # React UI (common/, onboarding/, waitingRoom/, yarn/)
+├─ components/          # React UI (common/, onboarding/, waitingRoom/)
 ├─ data/                # 화면에서 쓰는 정적 데이터 (API 도입 전까지의 목록 등)
 └─ game/                # Phaser 영역
    ├─ main.js           # 게임 설정
@@ -59,7 +58,7 @@ vite/                   # Vite 설정 (dev / prod)
 - 새 파일은 위 구조의 역할에 맞는 위치에 만든다.
 
 **폴더 선택 기준**
-- 한 화면에서만 쓰는 컴포넌트 → 해당 화면 폴더 (`components/onboarding/`, `components/waitingRoom/`, `components/yarn/`)
+- 한 화면에서만 쓰는 컴포넌트 → 해당 화면 폴더 (`components/onboarding/`, `components/waitingRoom/`)
 - 두 화면 이상에서 함께 쓰면 → `components/common/`
 - `pages/`에는 라우트 단위 페이지만 둔다. 재사용 UI는 `components/`로 뺀다.
 - Phaser 씬/오브젝트 코드는 `game/`에만 두고, `components/`나 `pages/`에 섞지 않는다.
