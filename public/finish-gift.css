@@ -63,6 +63,27 @@
     animation-delay: 0.7s;
 }
 
+/* 받기: 조각이 상자 안에서 위로 튀어나와 커지며 자리 잡는다 */
+.finish-gift-stage {
+    position: relative;
+}
+
+.finish-gift-piece {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 140px;
+    margin-left: -70px;
+    pointer-events: none;
+    animation: finish-gift-piece-out 1.2s cubic-bezier(0.2, 0.8, 0.3, 1.2) both;
+}
+
+@keyframes finish-gift-piece-out {
+    0% { opacity: 0; transform: translateY(80px) scale(0.2) rotate(-20deg); }
+    60% { opacity: 1; transform: translateY(-110px) scale(1.15) rotate(6deg); }
+    100% { opacity: 1; transform: translateY(-90px) scale(1) rotate(0); }
+}
+
 @keyframes finish-gift-pop {
     0% { opacity: 0; transform: translateY(30px) scale(0.8); }
     70% { opacity: 1; transform: translateY(0) scale(1.05); }
@@ -84,7 +105,8 @@
     .finish-gift-box,
     .finish-gift-illust,
     .finish-gift-message,
-    .finish-gift-btn {
+    .finish-gift-btn,
+    .finish-gift-piece {
         animation: none;
     }
 }

@@ -110,17 +110,22 @@ export function getPlayerSeatTexture ()
 }
 
 // 털실 위치(벤치 하단 중앙 기준): 바깥쪽 열은 바깥으로, 안쪽 열은 안쪽(복도 쪽)으로 벤치 옆에 놓아 겹치지 않게 한다.
-export function getPlayerWoolTexture (woolWidth, gap)
+export function getWoolTextureForBench (anchor, woolWidth, gap)
 {
     const center = WAITING_ROOM_TEXTURE_WIDTH / 2;
-    const isOuter = Math.abs(PLAYER_BENCH_ANCHOR.x - center) > center / 2;
-    const isLeftSide = PLAYER_BENCH_ANCHOR.x < center;
+    const isOuter = Math.abs(anchor.x - center) > center / 2;
+    const isLeftSide = anchor.x < center;
     const direction = (isLeftSide ? -1 : 1) * (isOuter ? 1 : -1);
 
     return {
-        x: PLAYER_BENCH_ANCHOR.x + direction * (WAITING_ROOM_BENCH_WIDTH_TEXTURE / 2 + gap + woolWidth / 2),
-        y: PLAYER_BENCH_ANCHOR.y
+        x: anchor.x + direction * (WAITING_ROOM_BENCH_WIDTH_TEXTURE / 2 + gap + woolWidth / 2),
+        y: anchor.y
     };
+}
+
+export function getPlayerWoolTexture (woolWidth, gap)
+{
+    return getWoolTextureForBench(PLAYER_BENCH_ANCHOR, woolWidth, gap);
 }
 
 // 개발 중 저장 시 Phaser 씬은 그대로라, 슬롯을 다시 읽도록 알림

@@ -377,3 +377,37 @@
         font-size: 13px;
     }
 }
+
+/* 가입/로그인 완료 팝업 */
+.finish-save-popup-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.finish-save-popup {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-md);
+    padding: 32px 40px;
+    border: 1px solid var(--finish-save-later-stroke);
+    border-radius: 16px;
+    background: var(--color-cream);
+}
+
+.finish-save-popup-text {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--color-brown-title);
+}
+
+.finish-save-popup-btn {
+    width: 160px;
+    color: var(--color-ink);
+}

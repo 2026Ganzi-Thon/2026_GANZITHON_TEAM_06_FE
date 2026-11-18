@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import AppHeader from '../components/common/AppHeader';
-import MongsilDialogue from '../components/onboarding/MongsilDialogue';
+import ChatPanel from '../components/common/ChatPanel';
+import ChoiceButton from '../components/common/ChoiceButton';
 import {
     MOOD_CHIPS,
     ROOM_DESCRIPTIONS,
@@ -17,15 +18,8 @@ const STEP_GREETING = 'greeting';
 const STEP_ROOM = 'room';
 const STEP_STATUS = 'status';
 const STEP_TICKET = 'ticket';
-
-function NextButton ({ disabled, onClick })
-{
-    return (
-        <button type="button" className="onboarding-next" disabled={disabled} onClick={onClick} aria-label="다음">
-            <img src="/assets/ui/next-button.png" alt="" />
-        </button>
-    );
-}
+// 승차권이 발급되는 연출을 보여 준 뒤 대기실로 넘어가기까지의 시간(ms)
+const ISSUE_ANIMATION_MS = 2200;
 
 function SpeakerIcon ()
 {
@@ -52,6 +46,20 @@ export default function OnboardingPage ()
     const [ticketLoading, setTicketLoading] = useState(false);
     const [ticketError, setTicketError] = useState(null);
     const [issuedTicketNumber, setIssuedTicketNumber] = useState(null);
+    // 발급이 끝나 연출을 보여 주는 중인지
+    const [isIssued, setIsIssued] = useState(false);
+
+    useEffect(() =>
+    {
+        if (!isIssued)
+        {
+            return undefined;
+        }
+
+        const timer = setTimeout(() => navigate('/waiting-room'), ISSUE_ANIMATION_MS);
+
+        return () => clearTimeout(timer);
+    }, [isIssued, navigate]);
 
     const selectedRoom = rooms.find((room) => room.roomCode === roomCode);
 
@@ -111,15 +119,20 @@ export default function OnboardingPage ()
             setIssuedTicketNumber(ticket.ticketNumber);
             saveOnboardingTrip({
                 roomCode,
+                roomName: selectedRoom?.name,
                 moodChip: ticket.moodChip,
                 ticketId: ticket.ticketId,
                 ticketNumber: ticket.ticketNumber,
                 displayName: ticket.displayName,
                 patternCode: ticket.patternCode,
-                guestToken: ticket.guestToken
+                guestToken: ticket.guestToken,
+                // 열차 시각 계산용: 시작 시각, 열차 간격, 기기 시계와 서버 시계의 차이
+                startedAt: ticket.startedAt,
+                trainIntervalMs: ticket.trainIntervalMs,
+                clockOffsetMs: Date.parse(ticket.serverTime) - Date.now()
             });
             requestWaitingRoomEntrance();
-            navigate('/waiting-room');
+            setIsIssued(true);
         }
         catch (error)
         {
@@ -130,6 +143,38 @@ export default function OnboardingPage ()
             setTicketLoading(false);
         }
     };
+
+    // 대화창에 보여 줄 내용. 승차권 단계는 사라지는 동안 상태 선택 단계의 내용을 그대로 쓴다.
+    const chatSteps = {
+        [STEP_GREETING]: {
+            portrait: 'portrait01',
+            message: '어서 오세요.\n오늘은 어떤 기다림을 안고 오셨어요?',
+            onNext: () => setStep(STEP_ROOM)
+        },
+        [STEP_ROOM]: {
+            portrait: 'portrait01',
+            message: '어떤 기다림이든 앉을 자리가 있어요.\n편한 문으로 들어가 보세요.',
+            nextDisabled: !roomCode,
+            onNext: () => setStep(STEP_STATUS)
+        },
+        [STEP_STATUS]: {
+            portrait: 'portrait05',
+            message: '지금 마음은 어떤 모양이에요?\n고르기 어려우면 건너뛰어도 괜찮아요.',
+            nextDisabled: !moodChip,
+            onNext: () =>
+            {
+                setIssuedTicketNumber(null);
+                setTicketError(null);
+                setStep(STEP_TICKET);
+            },
+            extra: (
+                <button type="button" className="finish-waiting-extra-btn" onClick={handleSkipStatus}>
+                    건너뛰기 &gt;&gt;
+                </button>
+            )
+        }
+    };
+    const chatContent = chatSteps[step === STEP_TICKET ? STEP_STATUS : step] ?? {};
 
     return (
         <main className={`onboarding onboarding-${step}`}>
@@ -152,10 +197,6 @@ export default function OnboardingPage ()
                         <SpeakerIcon />
                         잠시 정차합니다. 서두르지 않아도 괜찮습니다.
                     </p>
-                    <MongsilDialogue actions={<NextButton onClick={() => setStep(STEP_ROOM)} />}>
-                        <p>어서 오세요.</p>
-                        <p>오늘은 어떤 기다림을 안고 오셨어요?</p>
-                    </MongsilDialogue>
                 </>
             )}
 
@@ -172,29 +213,17 @@ export default function OnboardingPage ()
                         <ul className="onboarding-choices">
                             {rooms.map((room, index) => (
                                 <li key={room.roomCode}>
-                                    <button
-                                        type="button"
-                                        className={room.roomCode === roomCode ? 'onboarding-choice is-selected' : 'onboarding-choice'}
-                                        aria-pressed={room.roomCode === roomCode}
+                                    <ChoiceButton
+                                        index={index + 1}
+                                        title={room.name}
+                                        subtitle={ROOM_DESCRIPTIONS[room.roomCode] ?? ''}
+                                        selected={room.roomCode === roomCode}
                                         onClick={() => setRoomCode(room.roomCode)}
-                                    >
-                                        <span className="onboarding-choice-index">{index + 1}</span>
-                                        <span className="onboarding-choice-copy">
-                                            <strong>{room.name}</strong>
-                                            <span>{ROOM_DESCRIPTIONS[room.roomCode] ?? ''}</span>
-                                        </span>
-                                        {room.roomCode === roomCode && <span className="onboarding-check" aria-hidden="true">✓</span>}
-                                    </button>
+                                    />
                                 </li>
                             ))}
                         </ul>
                     )}
-                    <MongsilDialogue
-                        actions={<NextButton disabled={!roomCode} onClick={() => setStep(STEP_STATUS)} />}
-                    >
-                        <p>어떤 기다림이든 앉을 자리가 있어요.</p>
-                        <p>편한 문으로 들어가 보세요.</p>
-                    </MongsilDialogue>
                 </>
             )}
 
@@ -210,56 +239,58 @@ export default function OnboardingPage ()
                                     onClick={() => setMoodChip(chip.id)}
                                 >
                                     {chip.label}
-                                    {chip.id === moodChip && <span className="onboarding-check" aria-hidden="true">✓</span>}
+                                    {chip.id === moodChip && (
+                                        <span className="finish-waiting-check">
+                                            <img src="/assets/finish-waiting/check.png" alt="선택됨" />
+                                        </span>
+                                    )}
                                 </button>
                             </li>
                         ))}
                     </ul>
-                    <MongsilDialogue
-                        actions={(
-                            <>
-                                <NextButton
-                                    disabled={!moodChip}
-                                    onClick={() =>
-                                    {
-                                        setIssuedTicketNumber(null);
-                                        setTicketError(null);
-                                        setStep(STEP_TICKET);
-                                    }}
-                                />
-                                <button type="button" className="onboarding-skip" onClick={handleSkipStatus}>
-                                    건너뛰기 &gt;&gt;
-                                </button>
-                            </>
-                        )}
-                    >
-                        <p>지금 마음은 어떤 모양이에요?</p>
-                        <p>고르기 어려우면 건너뛰어도 괜찮아요.</p>
-                    </MongsilDialogue>
                 </>
             )}
 
+            {/* 몽실 역장 대화창은 인사~상태 선택 단계 내내 한 번만 올라오고, 승차권 단계로 넘어갈 때 내려간다 (단계마다 다시 나타나지 않는다) */}
+            {step !== STEP_START && (
+                <div className="onboarding-chat">
+                    <ChatPanel
+                        portrait={chatContent.portrait}
+                        message={chatContent.message}
+                        nextDisabled={chatContent.nextDisabled}
+                        onNext={chatContent.onNext}
+                        closing={step === STEP_TICKET}
+                    >
+                        {chatContent.extra}
+                    </ChatPanel>
+                </div>
+            )}
+
             {step === STEP_TICKET && selectedRoom && (
-                <section className="ticket-step">
-                    <img className="ticket-sparkle" src="/assets/ui/ticket-sparkle.png" alt="" />
-                    <p className="ticket-caption">대합실로 가는 승차권이에요.</p>
-                    <article className="ticket">
+                <section className={isIssued ? 'ticket-step is-issued' : 'ticket-step'}>
+                    <div className="ticket-step-top">
+                        <img className="ticket-sparkle" src="/assets/ui/ticket-sparkle.png" alt="" />
+                        <p className="ticket-caption">대합실로 가는 승차권이에요.</p>
+                    </div>
+                    <article className={isIssued ? 'ticket is-issued' : 'ticket'}>
                         <img src="/assets/ui/ticket.png" alt="승차권. 출발역 잠시역 3번홈, 도착예정 알 수 없음" />
                         <p className="ticket-destination">{selectedRoom.name}</p>
                         <p className="ticket-number">
                             NO. {issuedTicketNumber ?? '—'}
                         </p>
                     </article>
-                    {ticketError && <p className="onboarding-error">{ticketError}</p>}
-                    <button
-                        type="button"
-                        className="onboarding-pill"
-                        disabled={ticketLoading}
-                        onClick={handleReceiveTicket}
-                    >
-                        <img className="ticket-pill-icon" src="/assets/ui/ticket-sparkle.png" alt="" />
-                        {ticketLoading ? '발급 중…' : '승차권 받기'}
-                    </button>
+                    <div className="ticket-step-bottom">
+                        {ticketError && <p className="onboarding-error">{ticketError}</p>}
+                        <button
+                            type="button"
+                            className="onboarding-pill ticket-pill"
+                            disabled={ticketLoading || isIssued}
+                            onClick={handleReceiveTicket}
+                        >
+                            <img className="ticket-pill-icon" src="/assets/backgrounds/onboarding/ticket_icon.png" alt="" />
+                            {ticketLoading ? '발급 중…' : isIssued ? '발급 완료' : '승차권 받기'}
+                        </button>
+                    </div>
                 </section>
             )}
         </main>

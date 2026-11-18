@@ -1,12 +1,17 @@
 /* 기다림 마치기 화면 전용 스타일 (/finish-waiting)
  * 색·간격 변수(:root)는 style.css 에 있으므로 style.css 다음에 불러온다. */
 
-.finish-waiting-page {
+/* 선택 버튼(.finish-waiting-btn)이 쓰는 값: 기다림 마치기와 온보딩 대기실 목록이 함께 쓴다 */
+.finish-waiting-page,
+.onboarding-choices {
     --finish-waiting-coral: #f0745a;
-    --finish-waiting-back-color: #fdf0e2;
-    --finish-waiting-btn-width: 600px;
     --finish-waiting-btn-height: 100px;
     --finish-waiting-btn-padding: 28px;
+}
+
+.finish-waiting-page {
+    --finish-waiting-back-color: #fdf0e2;
+    --finish-waiting-btn-width: 600px;
     --finish-waiting-panel-width: 980px;
 
     min-height: 100dvh;
@@ -36,6 +41,8 @@
 
 .finish-waiting-btn {
     display: flex;
+    box-sizing: border-box;
+    width: 100%; /* 글자 길이와 상관없이 목록 너비를 꽉 채운다 */
     align-items: center;
     gap: var(--space-md);
     height: var(--finish-waiting-btn-height);
@@ -113,6 +120,35 @@
     aspect-ratio: 980 / 200;
     margin: calc(var(--space-md) + var(--space-sm)) auto var(--space-md);
     background: url('/assets/common/panel-chat.png') center / 100% 100% no-repeat;
+    animation: chat-panel-rise 0.45s ease-out both;
+}
+
+/* 등장: 아래에서 위로 올라오며 나타난다 (기다림 마치기·온보딩·대기실 열차 안내가 함께 쓴다) */
+@keyframes chat-panel-rise {
+    from { opacity: 0; transform: translateY(28px); }
+    to { opacity: 1; transform: none; }
+}
+
+/* 퇴장: 아래로 내려가며 사라진다 (0.35초. 부모는 이 시간만큼 기다렸다가 지운다) */
+.finish-waiting-panel.is-closing {
+    animation: chat-panel-fall 0.35s ease-in both;
+    pointer-events: none;
+}
+
+@keyframes chat-panel-fall {
+    from { opacity: 1; transform: none; }
+    to { opacity: 0; transform: translateY(28px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .finish-waiting-panel,
+    .finish-waiting-panel.is-closing {
+        animation: none;
+    }
+
+    .finish-waiting-panel.is-closing {
+        opacity: 0;
+    }
 }
 
 /* 초상화 240x240 은 패널 높이(200)보다 커서 위로 삐져나온다 */
@@ -148,6 +184,34 @@
     cursor: pointer;
 }
 
+.finish-waiting-next:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+}
+
+/* 다음 버튼 바로 아래에 놓는 추가 버튼 (온보딩의 건너뛰기). 다음 버튼(중심이 위에서 23%, 높이 40px) 아래에 6px 띄운다 */
+.finish-waiting-extra {
+    position: absolute;
+    right: 9%;
+    top: calc(23% + 20px + 6px);
+}
+
+/* 다음 버튼과 같은 크기 */
+.finish-waiting-extra-btn {
+    display: block;
+    width: 120px;
+    height: 40px;
+    padding: 0;
+    border: 1px solid #422d27;
+    border-radius: 12px;
+    background: #fef0e0;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    color: #422d27;
+    cursor: pointer;
+}
+
 .finish-waiting-next img {
     display: block;
     width: 120px;
@@ -158,6 +222,10 @@
 @media (max-width: 768px) {
     .finish-waiting-page {
         --finish-waiting-btn-width: 320px;
+    }
+
+    .finish-waiting-page,
+    .onboarding-choices {
         --finish-waiting-btn-height: 64px;
         --finish-waiting-btn-padding: 14px;
     }
@@ -206,5 +274,15 @@
     .finish-waiting-next img {
         width: 90px;
         height: 30px;
+    }
+
+    .finish-waiting-extra {
+        top: calc(23% + 15px + 6px);
+    }
+
+    .finish-waiting-extra-btn {
+        width: 90px;
+        height: 30px;
+        font-size: 11px;
     }
 }

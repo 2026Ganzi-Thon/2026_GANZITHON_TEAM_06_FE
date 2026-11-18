@@ -58,3 +58,63 @@ export function readGuestToken ()
 {
     return sessionStorage.getItem(GUEST_TOKEN_KEY);
 }
+
+// 비로그인으로 끝낸 기다림의 조각(종료 응답). 가입/로그인 후 계정으로 옮기고, 그 전엔 임시 보관함에 보여줍니다.
+const PENDING_PIECES_KEY = 'pendingPieces';
+
+export function readPendingPieces ()
+{
+    try
+    {
+        return JSON.parse(sessionStorage.getItem(PENDING_PIECES_KEY)) || [];
+    }
+    catch
+    {
+        return [];
+    }
+}
+
+export function savePendingPieces (pieces)
+{
+    if (pieces.length)
+    {
+        sessionStorage.setItem(PENDING_PIECES_KEY, JSON.stringify(pieces));
+    }
+    else
+    {
+        sessionStorage.removeItem(PENDING_PIECES_KEY);
+    }
+}
+
+
+// 열차는 기본 30분에 한 번 지나갑니다. 서버가 간격(trainIntervalMs)을 주면 그 값을 씁니다.
+const DEFAULT_TRAIN_INTERVAL_MS = 30 * 60 * 1000;
+
+function readTrainClock (trip)
+{
+    if (!trip?.startedAt)
+    {
+        return null;
+    }
+
+    return {
+        interval: trip.trainIntervalMs || DEFAULT_TRAIN_INTERVAL_MS,
+        elapsed: Date.now() + (trip.clockOffsetMs || 0) - Date.parse(trip.startedAt)
+    };
+}
+
+// 기다림을 시작한 뒤 지나간 열차 수 (누적). 승차권이 없으면 null.
+export function countPassedTrains (trip)
+{
+    const clock = readTrainClock(trip);
+
+    return clock ? Math.max(0, Math.floor(clock.elapsed / clock.interval)) : null;
+}
+
+// 다음 열차가 지나가기까지 남은 시간(ms). 승차권이 없으면 null.
+export function msUntilNextTrain (trip)
+{
+    const clock = readTrainClock(trip);
+
+    return clock ? clock.interval - (Math.max(0, clock.elapsed) % clock.interval) : null;
+}
