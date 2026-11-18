@@ -286,3 +286,19 @@
         font-size: 11px;
     }
 }
+
+/* 모바일 가로: 대화창이 화면을 가리지 않게 폭(높이 기준)과 글자·버튼을 줄인다 */
+@media (orientation: landscape) and (max-height: 500px) {
+    .finish-waiting-page {
+        --finish-waiting-panel-width: 110vh;
+    }
+
+    .finish-waiting-page .finish-waiting-message {
+        font-size: 2.4vh;
+    }
+
+    .finish-waiting-page .finish-waiting-next img {
+        width: 14vh;
+        height: 4.7vh;
+    }
+}

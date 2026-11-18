@@ -217,7 +217,6 @@ export default function OnboardingPage ()
 
             {step === STEP_ROOM && (
                 <>
-                    {roomsLoading && <p className="onboarding-status">대기실 목록을 불러오는 중이에요.</p>}
                     {roomsError && (
                         <div className="onboarding-status">
                             <p className="onboarding-error">{roomsError}</p>
