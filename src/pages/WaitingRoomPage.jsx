@@ -18,7 +18,12 @@ import {
     WAITING_ROOM_BIND_LOCAL_PLAYER,
     WAITING_ROOM_BROADCAST_RECEIVED
 } from '../game/waitingRoomReactionEvents';
-import { fetchWaitingRoomMarqueeStats } from '../services/waitingRoom';
+import {
+    fetchWaitingRoomMarqueeStats,
+    getTrainSyncPollIntervalMs,
+    syncWaitingRoomTicket,
+    WAITING_ROOM_TRAIN_CLOCK_SYNC
+} from '../services/waitingRoom';
 
 // 헤더가 숨고/다시 나타나는 스크롤 거리(px). 깜빡임을 막으려고 두 값을 다르게 둔다.
 const HEADER_HIDE_PAN = 20;
@@ -27,6 +32,7 @@ const HEADER_SHOW_PAN = 4;
 const TRAIN_CHAT_MS = 6000;
 // 안내 패널이 내려가며 사라지는 시간(ms). finish-waiting.css의 chat-panel-fall 길이와 같게 둔다.
 const CHAT_EXIT_MS = 350;
+const TRAIN_COUNT_SYNC_AFTER_PASS_MS = 1500;
 
 export default function WaitingRoomPage ()
 {
@@ -43,6 +49,7 @@ export default function WaitingRoomPage ()
     const [reactionBroadcasterTicketNumber, setReactionBroadcasterTicketNumber] = useState(null);
     const broadcastTimerRef = useRef(null);
     const cooldownTimerRef = useRef(null);
+    const trainSyncAfterPassTimerRef = useRef(null);
     // 모바일에서 배경이 스크롤된 만큼 상단 패널도 같이 움직이게 한다.
     const [roomPanY, setRoomPanY] = useState(0);
     // 모바일에서 아래로 스크롤하면 헤더를 숨기고, 맨 위로 돌아오면 다시 보인다.
@@ -53,14 +60,66 @@ export default function WaitingRoomPage ()
     // 사라지는 연출 중인지
     const [isTrainChatClosing, setIsTrainChatClosing] = useState(false);
 
+    const syncTrainFromApi = useCallback(async () =>
+    {
+        if (!trip?.ticketId)
+        {
+            return;
+        }
+
+        try
+        {
+            const snapshot = await syncWaitingRoomTicket(trip.ticketId);
+
+            if (snapshot?.trainCount != null)
+            {
+                setPassedTrains(snapshot.trainCount);
+            }
+
+            EventBus.emit(WAITING_ROOM_TRAIN_CLOCK_SYNC);
+        }
+        catch
+        {
+            const fallback = countPassedTrains(readOnboardingTrip());
+
+            if (fallback != null)
+            {
+                setPassedTrains(fallback);
+            }
+        }
+    }, [trip?.ticketId]);
+
     useEffect(() =>
     {
-        const handleTrainPassed = () => setTrainChat({});
+        const handleTrainPassed = () =>
+        {
+            setTrainChat({});
+
+            if (trainSyncAfterPassTimerRef.current)
+            {
+                clearTimeout(trainSyncAfterPassTimerRef.current);
+            }
+
+            trainSyncAfterPassTimerRef.current = setTimeout(() =>
+            {
+                trainSyncAfterPassTimerRef.current = null;
+                syncTrainFromApi();
+            }, TRAIN_COUNT_SYNC_AFTER_PASS_MS);
+        };
 
         EventBus.on('train-passed', handleTrainPassed);
 
-        return () => EventBus.off('train-passed', handleTrainPassed);
-    }, []);
+        return () =>
+        {
+            EventBus.off('train-passed', handleTrainPassed);
+
+            if (trainSyncAfterPassTimerRef.current)
+            {
+                clearTimeout(trainSyncAfterPassTimerRef.current);
+                trainSyncAfterPassTimerRef.current = null;
+            }
+        };
+    }, [syncTrainFromApi]);
 
     useEffect(() =>
     {
@@ -94,15 +153,36 @@ export default function WaitingRoomPage ()
         return () => EventBus.off('room-pan', handleRoomPan);
     }, []);
 
-    // 지나간 열차 수는 기다림 시작 시각 기준으로 계산해 누적합니다. 새로고침해도 이어집니다.
     const [passedTrains, setPassedTrains] = useState(() => countPassedTrains(trip));
 
     useEffect(() =>
     {
-        const timer = setInterval(() => setPassedTrains(countPassedTrains(trip)), 1000);
+        if (!trip?.ticketId)
+        {
+            return undefined;
+        }
 
-        return () => clearInterval(timer);
-    }, [trip]);
+        syncTrainFromApi();
+
+        const pollMs = getTrainSyncPollIntervalMs(readOnboardingTrip());
+        const pollTimer = setInterval(syncTrainFromApi, pollMs);
+
+        const handleVisibility = () =>
+        {
+            if (document.visibilityState === 'visible')
+            {
+                syncTrainFromApi();
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibility);
+
+        return () =>
+        {
+            clearInterval(pollTimer);
+            document.removeEventListener('visibilitychange', handleVisibility);
+        };
+    }, [trip?.ticketId, syncTrainFromApi]);
 
     const roomName = trip?.roomName ?? null;
     const roomSubtitle = trip?.roomCode ? ROOM_DESCRIPTIONS[trip.roomCode] : null;
