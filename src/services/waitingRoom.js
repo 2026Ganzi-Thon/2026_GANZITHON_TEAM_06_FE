@@ -1,50 +1,40 @@
-import { apiFetch } from './apiClient.js';
-import { fetchRooms } from './rooms.js';
+import { fetchTicket, fetchTicketStats } from './tickets.js';
 
-const EMPTY_STATS = {
-    waitingCount: 0,
-    arrivalCount: 0,
-    releasedCount: 0,
-    passedTrains: 0
-};
-
-export async function fetchRoomStats (roomCode)
+export async function fetchWaitingRoomMarqueeStats ()
 {
     try
     {
-        const stats = await apiFetch(`/api/v1/rooms/${encodeURIComponent(roomCode)}/stats`);
+        const stats = await fetchTicketStats();
 
         return {
-            waitingCount: stats.waitingCount ?? 0,
-            arrivalCount: stats.arrivalCount ?? 0,
-            releasedCount: stats.releasedCount ?? 0,
-            passedTrains: stats.passedTrains ?? 0
+            arrivalCount: stats.answeredCount ?? 0,
+            releasedCount: stats.letGoCount ?? 0
         };
     }
     catch
     {
-        // stats API 미연동 시 rooms 목록에서 같은 roomCode 찾기
+        return {
+            arrivalCount: null,
+            releasedCount: null
+        };
+    }
+}
+
+export async function fetchPassedTrains (ticketId)
+{
+    if (!ticketId)
+    {
+        return null;
     }
 
     try
     {
-        const rooms = await fetchRooms();
-        const room = rooms.find((item) => item.roomCode === roomCode);
+        const ticket = await fetchTicket(ticketId);
 
-        if (room)
-        {
-            return {
-                waitingCount: room.waitingCount ?? 0,
-                arrivalCount: room.arrivalCount ?? 0,
-                releasedCount: room.releasedCount ?? 0,
-                passedTrains: room.passedTrains ?? 0
-            };
-        }
+        return typeof ticket.trainCount === 'number' ? ticket.trainCount : null;
     }
     catch
     {
-        // 연결 불가
+        return null;
     }
-
-    return { ...EMPTY_STATS };
 }
