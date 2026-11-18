@@ -10,3 +10,13 @@ export async function createTicket ({ roomCode, moodChip })
         })
     });
 }
+
+export async function fetchTicket (ticketId)
+{
+    return apiFetch(`/api/v1/tickets/${encodeURIComponent(ticketId)}`);
+}
+
+export async function fetchTicketStats ()
+{
+    return apiFetch('/api/v1/tickets/stats');
+}
