@@ -3,6 +3,7 @@ import { Scene } from 'phaser';
 import { EventBus } from '../EventBus';
 import {
     getPlayerSeatTexture,
+    getPlayerWoolTexture,
     PLAYER_BENCH_ANCHOR,
     PLAYER_SEATED_DIRECTION,
     WAITING_ROOM_BENCH_SLOTS,
@@ -12,12 +13,33 @@ import { markWaitingRoomEntered, shouldPlayWaitingRoomEntrance } from '../waitin
 
 const ROOM_TEXTURE_WIDTH = 1442;
 const ROOM_TEXTURE_HEIGHT = 841;
+const MOBILE_MAX_HEIGHT = 520; // style.css의 가로 모바일 기준(520px)과 같은 값
 const WALK_MS = 1200;
 const SIT_MS = 1800;
 const TURN_MS = 450;
 const PLAYER_SEAT_WORLD_Y_NUDGE = 5;
 
+// 창문 밖 열차 (배경 텍스처 기준 중심 좌표·너비). 위치는 여기서 조정한다.
+const TRAIN_TEXTURE = { y: 225, width: 330 };
+// 연기: 열차 중심 기준 굴뚝 위 위치(텍스처 px)와 연기 너비. 굴뚝은 열차 왼쪽 앞부분에 있다.
+const STEAM_OFFSET = { x: -80, y: -48, width: 40 };
+// 열차가 창 오른쪽 밖에서 왼쪽 밖으로 지나가는 x 범위(텍스처 기준)와 시간.
+const TRAIN_START_X = 1058 + TRAIN_TEXTURE.width / 2;
+const TRAIN_END_X = 388 - TRAIN_TEXTURE.width / 2;
+const TRAIN_PASS_MS = 10000;
+const TRAIN_INTERVAL_MS = 4000; // 다음 열차까지 기다리는 시간
+
+// 열차 위에 덮는 창틀 (배경 텍스처 기준 윗변 중심 좌표·너비). 위치는 여기서 조정한다.
+const WINDOW_TEXTURE = { x: 726, y: 15, width: 760 };
+
+// 열차가 보이는 창문 전체 영역 (배경 텍스처 기준 x1, x2, y1, y2). 기둥·창살은 위에 덮은 창틀이 가린다.
+const TRAIN_WINDOW_AREA = [388, 1058, 90, 318];
+
 // 확정 배경 기준 문·플레이어 착석 (좌측 앞 벤치)
+// 플레이어 자리 옆에 놓이는 털실 (너비·벤치와의 간격, 배경 텍스처 px). 위치는 여기서 조정한다.
+const WOOL = { width: 68, gap: 6, mobileScale: 1.3, labelFontSize: 14, lift: 12, lift02: 8 };
+// mobileScale: 모바일은 배경이 작게 보여 털실을 더 키운다 / lift: 벤치 하단보다 위로 올리는 거리(텍스처 px)
+
 const ENTRANCE_TEXTURE = { x: 721, y: 755 };
 
 export class WaitingRoom extends Scene
@@ -33,11 +55,64 @@ export class WaitingRoom extends Scene
         this.roomScale = 1;
         this.roomOffsetX = 0;
         this.roomOffsetY = 0;
+        this.train = this.add.image(0, 0, 'train').setOrigin(0.5);
+        // 창문 유리 영역 밖은 열차를 잘라낸다. 마스크 도형은 화면에 그리지 않는다.
+        this.trainMaskShape = this.make.graphics({ add: false });
+        this.train.enableFilters();
+        this.train.filters.external.addMask(this.trainMaskShape, false, this.cameras.main);
+        this.trainTextureX = TRAIN_START_X;
+
+        // 굴뚝 연기: steam-0~11을 차례로 반복 재생하고, 열차와 같은 마스크로 창 밖에서는 잘라낸다.
+        this.anims.create({
+            key: 'steam',
+            frames: Array.from({ length: 12 }, (_, frame) => ({ key: `steam-${frame}` })),
+            frameRate: 8,
+            repeat: -1
+        });
+        this.steam = this.add.sprite(0, 0, 'steam-0').setOrigin(0.5, 1);
+        this.steam.enableFilters();
+        this.steam.filters.external.addMask(this.trainMaskShape, false, this.cameras.main);
+        this.steam.play('steam');
+        this.windowFrame = this.add.image(0, 0, 'window').setOrigin(0.5, 0);
+        this.wool = this.add.image(0, 0, 'wool01').setOrigin(0.5, 1).setVisible(false);
+        // 털실을 누르면 wool02로 바뀐다. 크기가 다를 수 있어 레이아웃을 다시 잡는다.
+        this.wool.setInteractive({ useHandCursor: true });
+        this.wool.on('pointerdown', () =>
+        {
+            this.wool.setTexture('wool02');
+            this.layoutWool();
+            // 털실톡톡 패널을 열도록 React에 알립니다.
+            EventBus.emit('wool-tok-open');
+        });
         this.benches = [];
         this._atBenchSeat = false;
+        this._panX = null;
+        this._panY = null;
+        this._canPanX = false;
+        this._canPanY = false;
 
         this.updateRoomLayout();
         this.scale.on('resize', this.updateRoomLayout, this);
+
+        // 배경이 화면보다 클 때(모바일) 드래그·휠로 위아래로 스크롤한다.
+        this.input.on('pointermove', this.handlePanDrag, this);
+        this.input.on('wheel', this.handlePanWheel, this);
+
+        // 열차가 창문 밖을 오른쪽에서 왼쪽으로 반복해서 지나간다.
+        this.tweens.add({
+            targets: this,
+            trainTextureX: TRAIN_END_X,
+            duration: TRAIN_PASS_MS,
+            repeat: -1,
+            repeatDelay: TRAIN_INTERVAL_MS,
+            onUpdate: () =>
+            {
+                const x = this.textureToWorld(this.trainTextureX, 0).x;
+
+                this.train.setX(x);
+                this.steam.setX(x + STEAM_OFFSET.x * this.roomScale);
+            }
+        });
 
         this.createWalkAnimations();
         this.createBenches();
@@ -45,6 +120,15 @@ export class WaitingRoom extends Scene
         this.handleBenchLayoutRefresh = () => this.refreshBenchLayoutFromModule();
 
         EventBus.on('refresh-waiting-room-bench-layout', this.handleBenchLayoutRefresh);
+
+        // 도안을 전달하면 털실이 wool03으로 바뀌고, 더 이상 누를 수 없다.
+        this.handleWoolDeliver = () =>
+        {
+            this.wool.setTexture('wool03');
+            this.wool.disableInteractive();
+            this.layoutWool();
+        };
+        EventBus.on('wool-deliver', this.handleWoolDeliver);
 
         EventBus.emit('current-scene-ready', this);
     }
@@ -56,7 +140,43 @@ export class WaitingRoom extends Scene
             EventBus.off('refresh-waiting-room-bench-layout', this.handleBenchLayoutRefresh);
         }
 
+        EventBus.off('wool-deliver', this.handleWoolDeliver);
         this.scale.off('resize', this.updateRoomLayout, this);
+        this.input.off('pointermove', this.handlePanDrag, this);
+        this.input.off('wheel', this.handlePanWheel, this);
+    }
+
+    panBy (deltaX, deltaY)
+    {
+        if (!this._canPanX && !this._canPanY)
+        {
+            return;
+        }
+
+        if (this._canPanX)
+        {
+            this._panX = this.roomOffsetX + deltaX;
+        }
+
+        if (this._canPanY)
+        {
+            this._panY = this.roomOffsetY + deltaY;
+        }
+
+        this.updateRoomLayout();
+    }
+
+    handlePanDrag (pointer)
+    {
+        if (pointer.isDown)
+        {
+            this.panBy(pointer.x - pointer.prevPosition.x, pointer.y - pointer.prevPosition.y);
+        }
+    }
+
+    handlePanWheel (pointer, objects, deltaX, deltaY)
+    {
+        this.panBy(-deltaX, -deltaY);
     }
 
     refreshBenchLayoutFromModule ()
@@ -82,18 +202,65 @@ export class WaitingRoom extends Scene
         const viewWidth = this.scale.width;
         const viewHeight = this.scale.height;
 
-        this.roomScale = Math.max(
-            viewWidth / ROOM_TEXTURE_WIDTH,
-            viewHeight / ROOM_TEXTURE_HEIGHT
-        );
+        const fitWidth = viewWidth / ROOM_TEXTURE_WIDTH;
+        const fitHeight = viewHeight / ROOM_TEXTURE_HEIGHT;
+        // 모바일(세로 화면, 또는 높이가 낮은 가로 화면)은 꽉 채우고, 그 외에는 배경 전체가 보이게 한다.
+        const isPortrait = viewHeight > viewWidth || viewHeight <= MOBILE_MAX_HEIGHT;
 
-        this.roomOffsetX = (viewWidth - ROOM_TEXTURE_WIDTH * this.roomScale) / 2;
-        this.roomOffsetY = (viewHeight - ROOM_TEXTURE_HEIGHT * this.roomScale) / 2;
+        this.roomScale = isPortrait ? Math.max(fitWidth, fitHeight) : Math.min(fitWidth, fitHeight);
 
-        this.roomImage.setOrigin(0.5);
+        const roomWidth = ROOM_TEXTURE_WIDTH * this.roomScale;
+        const roomHeight = ROOM_TEXTURE_HEIGHT * this.roomScale;
+
+        this.roomOffsetX = (viewWidth - roomWidth) / 2;
+        this.roomOffsetY = (viewHeight - roomHeight) / 2;
+
+        if (isPortrait)
+        {
+            // 잘리는 범위에서 플레이어 자리가 항상 보이도록 가운데를 맞춘다.
+            const seat = getPlayerSeatTexture();
+
+            // 좌우는 처음엔 플레이어 자리를 가운데로, 드래그하면 그만큼 움직인다.
+            this.roomOffsetX = Math.min(0, Math.max(viewWidth - roomWidth, this._panX ?? viewWidth / 2 - seat.x * this.roomScale));
+            const minOffsetY = viewHeight - roomHeight;
+
+            // 세로는 배경 맨 위에서 시작한다. 안내판은 배경 위쪽에 붙어 있어서 아래로 내리면 같이 올라간다.
+            this.roomOffsetY = Math.min(0, Math.max(minOffsetY, this._panY ?? 0));
+        }
+
+        this.isMobileLayout = isPortrait;
+        this._canPanX = isPortrait && roomWidth > viewWidth;
+        this._canPanY = isPortrait && roomHeight > viewHeight;
+
+        // 배경이 스크롤된 만큼 React 안내판도 같이 움직이도록 알린다.
+        EventBus.emit('room-pan', this._canPanY ? this.roomOffsetY : 0);
+
+        this.roomImage.setOrigin(0);
         this.roomImage.setScale(this.roomScale);
-        this.roomImage.setPosition(viewWidth / 2, viewHeight / 2);
+        this.roomImage.setPosition(this.roomOffsetX, this.roomOffsetY);
         this.roomImage.setDepth(0);
+
+        const train = this.textureToWorld(this.trainTextureX, TRAIN_TEXTURE.y);
+
+        this.train.setPosition(train.x, train.y);
+        this.train.setScale((TRAIN_TEXTURE.width * this.roomScale) / this.train.width);
+        this.train.setDepth(1);
+
+        this.steam.setPosition(train.x + STEAM_OFFSET.x * this.roomScale, train.y + STEAM_OFFSET.y * this.roomScale);
+        this.steam.setScale((STEAM_OFFSET.width * this.roomScale) / this.steam.width);
+        this.steam.setDepth(1);
+
+        const windowPos = this.textureToWorld(WINDOW_TEXTURE.x, WINDOW_TEXTURE.y);
+
+        this.windowFrame.setPosition(windowPos.x, windowPos.y);
+        this.windowFrame.setScale((WINDOW_TEXTURE.width * this.roomScale) / this.windowFrame.width);
+        this.windowFrame.setDepth(2);
+
+        this.trainMaskShape.clear().fillStyle(0xffffff);
+        const [x1, x2, y1, y2] = TRAIN_WINDOW_AREA;
+        const areaTopLeft = this.textureToWorld(x1, y1);
+
+        this.trainMaskShape.fillRect(areaTopLeft.x, areaTopLeft.y, (x2 - x1) * this.roomScale, (y2 - y1) * this.roomScale);
 
         this.layoutBenches();
 
@@ -104,6 +271,27 @@ export class WaitingRoom extends Scene
             this.player.setPosition(seat.x, seat.y);
             this.syncPlayerDepth();
         }
+
+        this.layoutWool();
+    }
+
+    // 털실을 플레이어가 앉은 벤치 옆에 놓는다.
+    layoutWool ()
+    {
+        const width = this.isMobileLayout ? WOOL.width * WOOL.mobileScale : WOOL.width;
+        const wool = getPlayerWoolTexture(width, WOOL.gap);
+        const pos = this.textureToWorld(wool.x, wool.y - WOOL.lift);
+        // wool02/wool03일 때는 이미지만 더 위로 올리고, 라벨 위치(pos)는 그대로 둔다.
+        const extraLift = this.wool.texture.key !== 'wool01' ? WOOL.lift02 * this.roomScale : 0;
+
+        this.wool.setPosition(pos.x, pos.y - extraLift);
+        this.wool.setScale((width * this.roomScale) / this.wool.width);
+        this.wool.setDepth(this.getSeatedPlayerDepth());
+
+        // 라벨은 React가 그린다. 위치(캔버스 px)와 글자 크기만 알려준다.
+        const fontSize = Math.max(11, Math.round(WOOL.labelFontSize * this.roomScale * (this.isMobileLayout ? WOOL.mobileScale : 1)));
+
+        EventBus.emit('wool-label', { x: pos.x, y: pos.y, fontSize, visible: this.wool.visible });
     }
 
     getPlayerSeatWorld (getSeatTexture = getPlayerSeatTexture)
@@ -221,6 +409,8 @@ export class WaitingRoom extends Scene
         this.player = this.add.sprite(x, y, `sit-${PLAYER_SEATED_DIRECTION}`);
         this.player.setOrigin(0.5, 1);
         this.syncPlayerDepth();
+        this.wool.setVisible(true);
+        this.layoutWool();
     }
 
     createWalkAnimations ()
@@ -282,6 +472,8 @@ export class WaitingRoom extends Scene
             this.player.setOrigin(0.5, 1);
             this.player.setPosition(x, y);
             this.syncPlayerDepth();
+            this.wool.setVisible(true);
+            this.layoutWool();
 
             const sitHoldMs = Math.max(0, SIT_MS - TURN_MS);
 
