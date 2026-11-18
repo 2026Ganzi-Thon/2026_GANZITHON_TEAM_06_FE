@@ -1,13 +1,24 @@
 import { Scene } from 'phaser';
 
+import { REACTION_FEEDBACK_MS } from '../../data/waitingRoomBroadcast';
 import { EventBus } from '../EventBus';
+import { WAITING_ROOM_DEMO_OCCUPANTS } from '../objects/waitingRoomDemoOccupants';
 import {
+    getBenchSeatTexture,
+    getBenchSeatWorldYNudge,
     getPlayerSeatTexture,
     PLAYER_BENCH_ANCHOR,
+    PLAYER_BENCH_SEAT_INDEX,
     PLAYER_SEATED_DIRECTION,
     WAITING_ROOM_BENCH_SLOTS,
     WAITING_ROOM_BENCH_WIDTH_TEXTURE
 } from '../objects/waitingRoomBenches';
+import {
+    getReactionEmoji,
+    WAITING_ROOM_BIND_LOCAL_PLAYER,
+    WAITING_ROOM_REACTION_EVENT,
+    WAITING_ROOM_REACTION_REMOTE
+} from '../waitingRoomReactionEvents';
 import { markWaitingRoomEntered, shouldPlayWaitingRoomEntrance } from '../waitingRoomEntry';
 
 const ROOM_TEXTURE_WIDTH = 1442;
@@ -15,7 +26,7 @@ const ROOM_TEXTURE_HEIGHT = 841;
 const WALK_MS = 1200;
 const SIT_MS = 1800;
 const TURN_MS = 450;
-const PLAYER_SEAT_WORLD_Y_NUDGE = 5;
+const PLAYER_SEAT_WORLD_Y_NUDGE = 13;
 
 // 확정 배경 기준 문·플레이어 착석 (좌측 앞 벤치)
 const ENTRANCE_TEXTURE = { x: 721, y: 755 };
@@ -35,6 +46,9 @@ export class WaitingRoom extends Scene
         this.roomOffsetY = 0;
         this.benches = [];
         this._atBenchSeat = false;
+        this.localTicketId = null;
+        this.occupantsByTicketId = new Map();
+        this.reactionEmojisByTicketId = new Map();
 
         this.updateRoomLayout();
         this.scale.on('resize', this.updateRoomLayout, this);
@@ -42,9 +56,18 @@ export class WaitingRoom extends Scene
         this.createWalkAnimations();
         this.createBenches();
         this.spawnPlayer();
+        this.spawnDemoOccupants();
         this.handleBenchLayoutRefresh = () => this.refreshBenchLayoutFromModule();
 
         EventBus.on('refresh-waiting-room-bench-layout', this.handleBenchLayoutRefresh);
+        this.handleWaitingRoomReaction = (payload) =>
+        {
+            this.showReactionForOccupant(payload?.ticketId, payload?.reactionType);
+        };
+        this.handleBindLocalPlayer = (payload) => this.bindLocalPlayerTicket(payload?.ticketId);
+        EventBus.on(WAITING_ROOM_REACTION_EVENT, this.handleWaitingRoomReaction);
+        EventBus.on(WAITING_ROOM_REACTION_REMOTE, this.handleWaitingRoomReaction);
+        EventBus.on(WAITING_ROOM_BIND_LOCAL_PLAYER, this.handleBindLocalPlayer);
 
         EventBus.emit('current-scene-ready', this);
     }
@@ -56,6 +79,19 @@ export class WaitingRoom extends Scene
             EventBus.off('refresh-waiting-room-bench-layout', this.handleBenchLayoutRefresh);
         }
 
+        if (this.handleWaitingRoomReaction)
+        {
+            EventBus.off(WAITING_ROOM_REACTION_EVENT, this.handleWaitingRoomReaction);
+            EventBus.off(WAITING_ROOM_REACTION_REMOTE, this.handleWaitingRoomReaction);
+        }
+
+        if (this.handleBindLocalPlayer)
+        {
+            EventBus.off(WAITING_ROOM_BIND_LOCAL_PLAYER, this.handleBindLocalPlayer);
+        }
+
+        this.clearAllReactionEmojis();
+        this.occupantsByTicketId.clear();
         this.scale.off('resize', this.updateRoomLayout, this);
     }
 
@@ -74,6 +110,7 @@ export class WaitingRoom extends Scene
 
             this.player.setPosition(seat.x, seat.y);
             this.syncPlayerDepth();
+            this.layoutDemoOccupants();
         });
     }
 
@@ -103,7 +140,257 @@ export class WaitingRoom extends Scene
 
             this.player.setPosition(seat.x, seat.y);
             this.syncPlayerDepth();
+            this.layoutDemoOccupants();
+            this.syncAllReactionEmojiPositions();
         }
+    }
+
+    bindLocalPlayerTicket (ticketId)
+    {
+        if (ticketId == null)
+        {
+            return;
+        }
+
+        this.localTicketId = ticketId;
+
+        if (this.player?.active)
+        {
+            this.registerOccupant(ticketId, this.player, { isLocal: true });
+        }
+    }
+
+    registerOccupant (ticketId, sprite, options = {})
+    {
+        if (ticketId == null || !sprite?.active)
+        {
+            return;
+        }
+
+        this.occupantsByTicketId.set(ticketId, {
+            sprite,
+            isLocal: Boolean(options.isLocal),
+            seatConfig: options.seatConfig ?? null
+        });
+    }
+
+    spawnDemoOccupants ()
+    {
+        WAITING_ROOM_DEMO_OCCUPANTS.forEach((config) =>
+        {
+            const slot = WAITING_ROOM_BENCH_SLOTS[config.benchSlotIndex];
+
+            if (!slot)
+            {
+                return;
+            }
+
+            const seat = this.getSeatWorldFromBench(config.benchSlotIndex, config.seatIndex);
+            const sprite = this.add.sprite(seat.x, seat.y, `sit-${config.sitDirection}`);
+
+            sprite.setOrigin(0.5, 1);
+            sprite.setDepth(this.getSeatedSpriteDepth(seat.y, slot));
+
+            this.registerOccupant(config.ticketId, sprite, {
+                isLocal: false,
+                seatConfig: {
+                    benchSlotIndex: config.benchSlotIndex,
+                    seatIndex: config.seatIndex
+                }
+            });
+        });
+    }
+
+    getSeatWorldFromBench (benchSlotIndex, seatIndex)
+    {
+        const slot = WAITING_ROOM_BENCH_SLOTS[benchSlotIndex];
+        const texture = getBenchSeatTexture(slot, seatIndex);
+        const world = this.textureToWorld(texture.x, texture.y);
+
+        world.y += PLAYER_SEAT_WORLD_Y_NUDGE;
+        world.y += getBenchSeatWorldYNudge(seatIndex);
+
+        return world;
+    }
+
+    layoutDemoOccupants ()
+    {
+        this.occupantsByTicketId.forEach((occupant) =>
+        {
+            if (occupant.isLocal || !occupant.seatConfig)
+            {
+                return;
+            }
+
+            const { benchSlotIndex, seatIndex } = occupant.seatConfig;
+            const slot = WAITING_ROOM_BENCH_SLOTS[benchSlotIndex];
+            const seat = this.getSeatWorldFromBench(benchSlotIndex, seatIndex);
+
+            occupant.sprite.setPosition(seat.x, seat.y);
+            occupant.sprite.setDepth(this.getSeatedSpriteDepth(seat.y, slot));
+        });
+    }
+
+    getSeatedDepthAtBenchFoot (benchSlot)
+    {
+        const benchFoot = this.textureToWorld(benchSlot.x, benchSlot.y);
+
+        return benchFoot.y + 1;
+    }
+
+    getSeatedSpriteDepth (worldFootY, benchSlot)
+    {
+        const benchDepth = this.getSeatedDepthAtBenchFoot(benchSlot);
+
+        return Math.max(benchDepth + 1, worldFootY + 0.5);
+    }
+
+    getSpriteFootDepth (sprite)
+    {
+        if (sprite === this.player && this.player?.active)
+        {
+            return this.getSeatedPlayerDepth();
+        }
+
+        return sprite.y + 1;
+    }
+
+    resolveOccupantSprite (ticketId)
+    {
+        if (ticketId != null && this.occupantsByTicketId.has(ticketId))
+        {
+            return this.occupantsByTicketId.get(ticketId).sprite;
+        }
+
+        if (this.player?.active)
+        {
+            return this.player;
+        }
+
+        return null;
+    }
+
+    reactionKey (ticketId)
+    {
+        if (ticketId != null)
+        {
+            return String(ticketId);
+        }
+
+        if (this.localTicketId != null)
+        {
+            return String(this.localTicketId);
+        }
+
+        return 'local';
+    }
+
+    clearReactionEmoji (ticketId)
+    {
+        const key = this.reactionKey(ticketId);
+        const entry = this.reactionEmojisByTicketId.get(key);
+
+        if (!entry)
+        {
+            return;
+        }
+
+        if (entry.timer)
+        {
+            entry.timer.remove(false);
+        }
+
+        if (entry.text?.active)
+        {
+            entry.text.destroy();
+        }
+
+        this.reactionEmojisByTicketId.delete(key);
+    }
+
+    clearAllReactionEmojis ()
+    {
+        const keys = [...this.reactionEmojisByTicketId.keys()];
+
+        keys.forEach((key) =>
+        {
+            const ticketId = key === 'local' ? null : Number(key);
+
+            this.clearReactionEmoji(ticketId);
+        });
+    }
+
+    syncAllReactionEmojiPositions ()
+    {
+        this.reactionEmojisByTicketId.forEach((entry, key) =>
+        {
+            const ticketId = key === 'local' ? this.localTicketId : Number(key);
+            const sprite = this.resolveOccupantSprite(ticketId);
+
+            if (!sprite?.active || !entry.text?.active)
+            {
+                return;
+            }
+
+            const offsetY = sprite.displayHeight * 0.92;
+            const fontSize = Math.max(18, Math.round(26 * this.roomScale));
+
+            entry.text.setPosition(sprite.x, sprite.y - offsetY);
+            entry.text.setDepth(this.getSpriteFootDepth(sprite) + 2);
+            entry.text.setFontSize(`${fontSize}px`);
+        });
+    }
+
+    showReactionForOccupant (ticketId, reactionType)
+    {
+        const sprite = this.resolveOccupantSprite(ticketId);
+
+        if (!sprite?.active || !reactionType)
+        {
+            return;
+        }
+
+        const key = this.reactionKey(ticketId);
+
+        this.clearReactionEmoji(ticketId);
+
+        const emoji = getReactionEmoji(reactionType);
+        const offsetY = sprite.displayHeight * 0.92;
+        const fontSize = Math.max(18, Math.round(26 * this.roomScale));
+
+        const text = this.add.text(sprite.x, sprite.y - offsetY, emoji, {
+            fontFamily: 'Pretendard Variable, Pretendard, Apple Color Emoji, Segoe UI Emoji, sans-serif',
+            fontSize: `${fontSize}px`
+        });
+
+        text.setOrigin(0.5, 1);
+        text.setDepth(this.getSpriteFootDepth(sprite) + 2);
+        text.setAlpha(0);
+
+        this.tweens.add({
+            targets: text,
+            alpha: 1,
+            y: text.y - 6,
+            duration: 180,
+            ease: 'Sine.easeOut'
+        });
+
+        const timer = this.time.delayedCall(REACTION_FEEDBACK_MS, () =>
+        {
+            if (!text.active)
+            {
+                return;
+            }
+
+            this.tweens.add({
+                targets: text,
+                alpha: 0,
+                duration: 200,
+                onComplete: () => this.clearReactionEmoji(ticketId)
+            });
+        });
+
+        this.reactionEmojisByTicketId.set(key, { text, timer });
     }
 
     getPlayerSeatWorld (getSeatTexture = getPlayerSeatTexture)
@@ -112,6 +399,7 @@ export class WaitingRoom extends Scene
         const seat = this.textureToWorld(seatTexture.x, seatTexture.y);
 
         seat.y += PLAYER_SEAT_WORLD_Y_NUDGE;
+        seat.y += getBenchSeatWorldYNudge(PLAYER_BENCH_SEAT_INDEX);
 
         return seat;
     }
@@ -190,10 +478,18 @@ export class WaitingRoom extends Scene
 
     getSeatedPlayerDepth ()
     {
-        // 벤치 depth(world.y - 1)보다 앞에 그리기
-        const benchFoot = this.textureToWorld(PLAYER_BENCH_ANCHOR.x, PLAYER_BENCH_ANCHOR.y);
+        const playerSlot = {
+            x: PLAYER_BENCH_ANCHOR.x,
+            y: PLAYER_BENCH_ANCHOR.y,
+            flipX: false
+        };
 
-        return benchFoot.y + 1;
+        if (this.player?.active)
+        {
+            return this.getSeatedSpriteDepth(this.player.y, playerSlot);
+        }
+
+        return this.getSeatedDepthAtBenchFoot(playerSlot);
     }
 
     syncPlayerDepth ()
@@ -221,6 +517,7 @@ export class WaitingRoom extends Scene
         this.player = this.add.sprite(x, y, `sit-${PLAYER_SEATED_DIRECTION}`);
         this.player.setOrigin(0.5, 1);
         this.syncPlayerDepth();
+        this.bindLocalPlayerTicket(this.localTicketId);
     }
 
     createWalkAnimations ()
@@ -282,6 +579,7 @@ export class WaitingRoom extends Scene
             this.player.setOrigin(0.5, 1);
             this.player.setPosition(x, y);
             this.syncPlayerDepth();
+            this.bindLocalPlayerTicket(this.localTicketId);
 
             const sitHoldMs = Math.max(0, SIT_MS - TURN_MS);
 

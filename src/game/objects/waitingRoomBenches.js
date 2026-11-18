@@ -3,14 +3,23 @@ export const WAITING_ROOM_TEXTURE_WIDTH = 1442;
 
 export const WAITING_ROOM_BENCH_WIDTH_TEXTURE = 148;
 
-// 벤치 표시 너비(148tex) · sit 스프라이트(48px) 기준 의자당 약 2마리
-export const SHEEP_SEATS_PER_BENCH = 2;
+// 벤치당 3좌석 (148tex 너비 기준 좌·중·우)
+export const SHEEP_SEATS_PER_BENCH = 3;
 
-// 벤치 앵커(하단 중앙) 기준 — sit 스프라이트 origin(0.5, 1) 발 위치
-const BENCH_SEAT_OFFSETS = [
-    { x: -28, y: -68 },
-    { x: 28, y: -68 }
-];
+// 화면 기준 좌하(0) 아래·우상(2) 위 — 월드 y+ = 아래
+export const BENCH_SEAT_WORLD_Y_NUDGE = [6, 0, -6];
+
+// 벤치 앵커(하단 중앙) 기준 안장: 좌하 → 우상 대각선
+const SEAT_ORIGIN = { x: -36, y: -60 };
+const SEAT_AXIS_STEP = { dx: 36, dy: -6 };
+
+function getBenchSeatOffset (seatIndex)
+{
+    return {
+        x: SEAT_ORIGIN.x + SEAT_AXIS_STEP.dx * seatIndex,
+        y: SEAT_ORIGIN.y + SEAT_AXIS_STEP.dy * seatIndex
+    };
+}
 
 // 와이어프레임(좌측 절반) — 화면 위로 = y 감소 (좌측열 −30, 우측열 −80)
 const LEFT_BENCH_Y_BASE = [
@@ -56,21 +65,36 @@ function buildSymmetricBenchSlots ()
 
 export const WAITING_ROOM_BENCH_SLOTS = buildSymmetricBenchSlots();
 
-// 플레이어 착석: 좌측 앞줄 창가 벤치, 두 자리 중 오른쪽
+// 플레이어 벤치 슬롯 인덱스(좌측 앞줄 5번 벤치 = 8)
+export const PLAYER_BENCH_SLOT_INDEX = 8;
+
+// 플레이어: 3좌석 중 우상(인덱스 2)
 export const PLAYER_BENCH_ANCHOR = LEFT_BENCH_ANCHORS[4];
-export const PLAYER_BENCH_SEAT_INDEX = 1;
+export const PLAYER_BENCH_SEAT_INDEX = 2;
 
 // 플레이어 착석 후 바라보는 방향 (우측 아래)
 export const PLAYER_SEATED_DIRECTION = 'south-east';
 
+export function getSitDirectionForBenchSlot (slot)
+{
+    // 좌측 열: 방 중앙(우측)을 봄 — 우측 열: 방 중앙(좌측)을 봄
+    return slot.flipX ? 'south-west' : 'south-east';
+}
+
+export function getBenchSeatWorldYNudge (seatIndex)
+{
+    return BENCH_SEAT_WORLD_Y_NUDGE[seatIndex] ?? 0;
+}
+
 export function getBenchSeatTexture (slot, seatIndex = 0)
 {
-    const offset = BENCH_SEAT_OFFSETS[seatIndex] ?? BENCH_SEAT_OFFSETS[0];
+    const offset = getBenchSeatOffset(seatIndex);
     const seatX = slot.x + (slot.flipX ? -offset.x : offset.x);
+    const seatY = slot.y + offset.y;
 
     return {
         x: seatX,
-        y: slot.y + offset.y
+        y: seatY
     };
 }
 
