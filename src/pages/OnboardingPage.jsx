@@ -91,6 +91,18 @@ export default function OnboardingPage ()
         }
     }, [step, rooms.length, roomsLoading, roomsError]);
 
+    // 승차권 화면에 들어오면 바로 벨 소리를 낸다. 자동재생 차단 등으로 실패해도 무시한다.
+    useEffect(() =>
+    {
+        if (step === STEP_TICKET)
+        {
+            const bell = new Audio('/assets/sounds/bell.mp3');
+
+            bell.volume = 0.6;
+            bell.play().catch(() => {});
+        }
+    }, [step]);
+
     const handleSkipStatus = () =>
     {
         setMoodChip(null);
@@ -105,6 +117,9 @@ export default function OnboardingPage ()
         {
             return;
         }
+
+        // 승차권 받기를 누르면 승차권 소리를 낸다. 자동재생 차단 등으로 실패해도 무시한다.
+        new Audio('/assets/sounds/ticket.mp3').play().catch(() => {});
 
         setTicketLoading(true);
         setTicketError(null);
