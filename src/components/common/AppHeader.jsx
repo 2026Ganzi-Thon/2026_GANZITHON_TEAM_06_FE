@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 
 // shortcut: 발표 전에 공공 상담 번호가 최신인지 확인, SF-01
 const SAFETY_LINES = [
-    { name: '자살예방상담전화', number: '109', href: 'tel:109' },
-    { name: '정신건강위기상담전화', number: '1577-0199', href: 'tel:15770199' },
-    { name: '청소년상담전화', number: '1388', href: 'tel:1388' }
+    { icon: '/assets/help/icon-01.png', title: '자살예방상담전화', call: '109', sub: '24시간 운영 · 통화료 무료', href: 'tel:109' },
+    { icon: '/assets/help/icon-02.png', title: '정신건강 위기상담전화', call: '1577-0199', sub: '24시간 운영 · 전문 정신 건강 요원', href: 'tel:15770199' },
+    { icon: '/assets/help/icon-03.png', title: '청소년 상담 전화', call: '1388', sub: '청소년 및 보호자 대상 · 24시간 운영', href: 'tel:1388' },
+    { icon: '/assets/help/icon-04.png', title: '긴급 상황', call: '112 / 119', sub: '경찰청 긴급신고 / 소방청 119 안전센터', href: 'tel:119' }
 ];
 
 function SafetyPanel ({ onClose })
@@ -29,16 +30,27 @@ function SafetyPanel ({ onClose })
         <div className="safety-panel" role="dialog" aria-modal="true" aria-labelledby="safety-panel-title">
             <button type="button" className="safety-panel-backdrop" aria-label="안전 안내 닫기" onClick={onClose} />
             <section className="safety-panel-card">
-                <h2 id="safety-panel-title">안전 안내</h2>
-                <p>기다림과 상관없이, 이야기하고 싶을 때 연결할 수 있는 공공 상담전화입니다.</p>
+                <span className="safety-panel-bar" />
+                <h2 id="safety-panel-title">도움이 필요할 때</h2>
+                <p>마음이 많이 힘들 때는 언제든 상담을 이용할 수 있어요.</p>
                 <ul>
                     {SAFETY_LINES.map((line) => (
                         <li key={line.href}>
-                            <a href={line.href}>{line.name} {line.number}</a>
+                            <img src={line.icon} alt="" />
+                            <div className="safety-panel-text">
+                                <p className="safety-panel-line">
+                                    <strong>{line.title}</strong>
+                                    <span className="safety-panel-number">{line.call}</span>
+                                </p>
+                                <p className="safety-panel-sub">{line.sub}</p>
+                            </div>
+                            <a className="safety-panel-call" href={line.href}>
+                                <img src="/assets/help/call-icon.png" alt="" />
+                                <span>전화 하기</span>
+                            </a>
                         </li>
                     ))}
                 </ul>
-                <button type="button" className="safety-panel-close" onClick={onClose}>닫기</button>
             </section>
         </div>
     );
