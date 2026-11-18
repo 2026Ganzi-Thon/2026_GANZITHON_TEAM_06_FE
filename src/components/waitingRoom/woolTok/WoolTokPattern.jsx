@@ -1,27 +1,25 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
-// d-heart.png의 8x8 칸 모양. 1은 하트(c-heart-1), 0은 배경(c-heart-2) 실로 채운다.
-const HEART_ROWS = [
-    '00000000',
-    '01100110',
-    '11111111',
-    '11111111',
-    '11111111',
-    '01111110',
-    '00111100',
-    '00011000'
-];
-const CELLS = HEART_ROWS.flatMap((row, r) => [...row].map((value, c) => ({ id: r * 8 + c, row: r, col: c, isHeart: value === '1' })));
+import { PATTERN_IMAGE_NAMES } from '../../../data/pieces';
+import { WOOL_PATTERNS } from '../../../data/woolPatterns';
+
+// 도안 코드(PATTERN_HEART)에 맞는 칸 목록. color는 그 칸을 채우는 실 이미지 번호입니다.
+function buildCells (name)
+{
+    return (WOOL_PATTERNS[name] ?? []).flatMap((row, r) => [...row].map((color, c) => ({ id: r * 8 + c, row: r, col: c, color })));
+}
 
 // 도안 위의 칸을 누르면 그 칸이 실 이미지로 채워진다.
-export default function WoolTokPattern ({ onCompleteChange })
+export default function WoolTokPattern ({ patternCode, onCompleteChange })
 {
+    const name = PATTERN_IMAGE_NAMES[patternCode];
+    const cells = useMemo(() => buildCells(name), [name]);
     const [filled, setFilled] = useState(() => new Set());
 
     // 한 획: 마지막으로 채운 칸에서 위/아래/왼쪽/오른쪽으로 이웃한 같은 색 빈 칸만 이어서 채운다. null이면 드래그 중이 아님.
     const lastCell = useRef(null);
 
-    const isComplete = filled.size === CELLS.length;
+    const isComplete = cells.length > 0 && filled.size === cells.length;
 
     // 다 채웠는지 부모(전달 버튼 활성화)에 알린다.
     useEffect(() => onCompleteChange?.(isComplete), [isComplete, onCompleteChange]);
@@ -33,7 +31,7 @@ export default function WoolTokPattern ({ onCompleteChange })
     {
         const el = document.elementFromPoint(event.clientX, event.clientY)?.closest('[data-cell-id]');
 
-        return el ? CELLS[Number(el.dataset.cellId)] : null;
+        return el ? cells[Number(el.dataset.cellId)] : null;
     };
 
     const handlePointerDown = (event) =>
@@ -54,7 +52,7 @@ export default function WoolTokPattern ({ onCompleteChange })
         const last = lastCell.current;
         const cell = last ? cellAt(event) : null;
 
-        if (!cell || filled.has(cell.id) || cell.isHeart !== last.isHeart)
+        if (!cell || filled.has(cell.id) || cell.color !== last.color)
         {
             return;
         }
@@ -72,9 +70,14 @@ export default function WoolTokPattern ({ onCompleteChange })
         lastCell.current = null;
     };
 
+    if (!cells.length)
+    {
+        return null;
+    }
+
     return (
         <div className={isComplete ? 'wool-pattern is-complete' : 'wool-pattern'}>
-            <img className="wool-pattern-bg" src="/assets/blanket/d-heart.png" alt="도안" draggable={false} />
+            <img className="wool-pattern-bg" src={`/assets/blanket/d-${name}.png`} alt="도안" draggable={false} />
             <div
                 className="wool-pattern-grid"
                 onPointerDown={handlePointerDown}
@@ -82,7 +85,7 @@ export default function WoolTokPattern ({ onCompleteChange })
                 onPointerUp={stopDrawing}
                 onPointerCancel={stopDrawing}
             >
-                {CELLS.map((cell) => (
+                {cells.map((cell) => (
                     <button
                         key={cell.id}
                         data-cell-id={cell.id}
@@ -93,7 +96,7 @@ export default function WoolTokPattern ({ onCompleteChange })
                         onClick={() => handleFill(cell.id)}
                     >
                         {filled.has(cell.id) && (
-                            <img src={`/assets/blanket/c-heart-${cell.isHeart ? 1 : 2}.png`} alt="" draggable={false} />
+                            <img src={`/assets/blanket/c-${name}-${cell.color}.png`} alt="" draggable={false} />
                         )}
                     </button>
                 ))}

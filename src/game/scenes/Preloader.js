@@ -30,6 +30,7 @@ export class Preloader extends Scene
     {
         this.load.setPath('assets');
         this.load.image('waiting-room', 'backgrounds/waiting-room/room.png');
+        this.load.image('clock', 'backgrounds/waiting-room/clock.png');
         this.load.image('waiting-room-bench', 'items/waiting-room/bench-isometric.png');
         this.load.svg('train', 'ui/waiting-room/train.svg', { width: 1238, height: 579 });
         for (let frame = 0; frame < 12; frame += 1)

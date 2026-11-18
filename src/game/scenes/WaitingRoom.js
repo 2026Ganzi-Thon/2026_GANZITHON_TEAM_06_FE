@@ -4,11 +4,13 @@ import { EventBus } from '../EventBus';
 import {
     getPlayerSeatTexture,
     getPlayerWoolTexture,
+    getWoolTextureForBench,
     PLAYER_BENCH_ANCHOR,
     PLAYER_SEATED_DIRECTION,
     WAITING_ROOM_BENCH_SLOTS,
     WAITING_ROOM_BENCH_WIDTH_TEXTURE
 } from '../objects/waitingRoomBenches';
+import { countPassedTrains, msUntilNextTrain, readOnboardingTrip } from '../onboardingSession';
 import { markWaitingRoomEntered, shouldPlayWaitingRoomEntrance } from '../waitingRoomEntry';
 
 const ROOM_TEXTURE_WIDTH = 1442;
@@ -27,7 +29,12 @@ const STEAM_OFFSET = { x: -80, y: -48, width: 40 };
 const TRAIN_START_X = 1058 + TRAIN_TEXTURE.width / 2;
 const TRAIN_END_X = 388 - TRAIN_TEXTURE.width / 2;
 const TRAIN_PASS_MS = 10000;
-const TRAIN_INTERVAL_MS = 4000; // 다음 열차까지 기다리는 시간
+
+// 책장 위 벽에 거는 시계 (배경 텍스처 기준, 시계 그림의 아랫변 중심 좌표). 위치는 여기서 조정한다.
+// x는 양옆 벽등 사이의 가운데, y는 벽지(나무 장식 아래~걸레받이 위)의 세로 가운데에 시계가 오도록 잡았다.
+const CLOCKS = [{ x: 200, y: 175 }, { x: 1252, y: 175 }];
+const CLOCK_WIDTH = 126; // clock.png 한 장의 너비(텍스처 px). 둘레가 투명해서 실제 시계는 약 44% 크기다.
+const CLOCK_ORIGIN = { x: 231.5 / 512, y: 394 / 512 }; // clock.png(512x512) 안 시계 그림의 아랫변 중심
 
 // 열차 위에 덮는 창틀 (배경 텍스처 기준 윗변 중심 좌표·너비). 위치는 여기서 조정한다.
 const WINDOW_TEXTURE = { x: 726, y: 15, width: 760 };
@@ -39,6 +46,9 @@ const TRAIN_WINDOW_AREA = [388, 1058, 90, 318];
 // 플레이어 자리 옆에 놓이는 털실 (너비·벤치와의 간격, 배경 텍스처 px). 위치는 여기서 조정한다.
 const WOOL = { width: 68, gap: 6, mobileScale: 1.3, labelFontSize: 14, lift: 12, lift02: 8 };
 // mobileScale: 모바일은 배경이 작게 보여 털실을 더 키운다 / lift: 벤치 하단보다 위로 올리는 거리(텍스처 px)
+
+// 털실 위치 확인용 디버그. 확인할 때만 true로 바꾸고, 커밋하기 전에 false로 되돌린다.
+const DEBUG_WOOL_POSITIONS = false;
 
 const ENTRANCE_TEXTURE = { x: 721, y: 755 };
 
@@ -52,6 +62,7 @@ export class WaitingRoom extends Scene
     create ()
     {
         this.roomImage = this.add.image(0, 0, 'waiting-room');
+        this.clocks = CLOCKS.map(() => this.add.image(0, 0, 'clock').setOrigin(CLOCK_ORIGIN.x, CLOCK_ORIGIN.y).setDepth(0.5));
         this.roomScale = 1;
         this.roomOffsetX = 0;
         this.roomOffsetY = 0;
@@ -75,15 +86,24 @@ export class WaitingRoom extends Scene
         this.steam.play('steam');
         this.windowFrame = this.add.image(0, 0, 'window').setOrigin(0.5, 0);
         this.wool = this.add.image(0, 0, 'wool01').setOrigin(0.5, 1).setVisible(false);
-        // 털실을 누르면 wool02로 바뀐다. 크기가 다를 수 있어 레이아웃을 다시 잡는다.
-        this.wool.setInteractive({ useHandCursor: true });
+        // 털실이 나타날 때의 등장 진행도(0~1). 1이면 평소 모습이다.
+        this.woolIntro = 1;
+        // 털실이 한 올 쌓이기 전(wool01)에는 누를 수 없고, 쌓이면 wool02로 바뀌어 누르면 털실 톡톡이 열린다.
         this.wool.on('pointerdown', () =>
         {
-            this.wool.setTexture('wool02');
-            this.layoutWool();
             // 털실톡톡 패널을 열도록 React에 알립니다.
             EventBus.emit('wool-tok-open');
         });
+        // DEBUG_WOOL_POSITIONS를 true로 바꾸면 모든 벤치 옆 털실 위치를 번호와 함께 보여 준다 (위치 확인용).
+        this.debugWools = [];
+        if (DEBUG_WOOL_POSITIONS)
+        {
+            this.debugWools = WAITING_ROOM_BENCH_SLOTS.map((slot, index) => ({
+                slot,
+                image: this.add.image(0, 0, 'wool01').setOrigin(0.5, 1),
+                label: this.add.text(0, 0, String(index), { fontSize: '14px', color: '#ffffff', backgroundColor: '#000000' }).setOrigin(0.5, 1)
+            }));
+        }
         this.benches = [];
         this._atBenchSeat = false;
         this._panX = null;
@@ -98,21 +118,12 @@ export class WaitingRoom extends Scene
         this.input.on('pointermove', this.handlePanDrag, this);
         this.input.on('wheel', this.handlePanWheel, this);
 
-        // 열차가 창문 밖을 오른쪽에서 왼쪽으로 반복해서 지나간다.
-        this.tweens.add({
-            targets: this,
-            trainTextureX: TRAIN_END_X,
-            duration: TRAIN_PASS_MS,
-            repeat: -1,
-            repeatDelay: TRAIN_INTERVAL_MS,
-            onUpdate: () =>
-            {
-                const x = this.textureToWorld(this.trainTextureX, 0).x;
+        // 열차는 평소엔 창 밖에 있다가, 30분(서버 간격)마다 한 번 오른쪽에서 왼쪽으로 지나간다.
+        this.scheduleTrain();
 
-                this.train.setX(x);
-                this.steam.setX(x + STEAM_OFFSET.x * this.roomScale);
-            }
-        });
+        // 열차가 지나가 털실이 쌓였는지 1초마다 확인해 털실 모양을 바꾼다.
+        this.updateWoolState();
+        this.time.addEvent({ delay: 1000, loop: true, callback: () => this.updateWoolState() });
 
         this.createWalkAnimations();
         this.createBenches();
@@ -124,6 +135,7 @@ export class WaitingRoom extends Scene
         // 도안을 전달하면 털실이 wool03으로 바뀌고, 더 이상 누를 수 없다.
         this.handleWoolDeliver = () =>
         {
+            this.isWoolDelivered = true;
             this.wool.setTexture('wool03');
             this.wool.disableInteractive();
             this.layoutWool();
@@ -197,6 +209,71 @@ export class WaitingRoom extends Scene
         });
     }
 
+    // 받은 털실(= 지나간 열차)이 1올 이상이면 wool02(누를 수 있음), 아니면 wool01. 전달한 뒤에는 wool03을 유지한다.
+    updateWoolState ()
+    {
+        if (this.isWoolDelivered)
+        {
+            return;
+        }
+
+        const hasYarn = (countPassedTrains(readOnboardingTrip()) ?? 0) >= 1;
+        const key = hasYarn ? 'wool02' : 'wool01';
+
+        if (this.wool.texture.key === key)
+        {
+            return;
+        }
+
+        this.wool.setTexture(key);
+
+        if (hasYarn)
+        {
+            this.wool.setInteractive({ useHandCursor: true });
+        }
+        else
+        {
+            this.wool.disableInteractive();
+        }
+
+        this.layoutWool();
+    }
+
+    scheduleTrain ()
+    {
+        const delay = msUntilNextTrain(readOnboardingTrip());
+
+        if (delay === null)
+        {
+            return;
+        }
+
+        this.trainTimer = this.time.delayedCall(delay, () =>
+        {
+            this.playTrainPass();
+            this.scheduleTrain();
+        });
+    }
+
+    playTrainPass ()
+    {
+        // 열차가 지나갔다는 안내를 React가 띄우도록 알립니다.
+        EventBus.emit('train-passed');
+        this.trainTextureX = TRAIN_START_X;
+        this.tweens.add({
+            targets: this,
+            trainTextureX: TRAIN_END_X,
+            duration: TRAIN_PASS_MS,
+            onUpdate: () =>
+            {
+                const x = this.textureToWorld(this.trainTextureX, 0).x;
+
+                this.train.setX(x);
+                this.steam.setX(x + STEAM_OFFSET.x * this.roomScale);
+            }
+        });
+    }
+
     updateRoomLayout ()
     {
         const viewWidth = this.scale.width;
@@ -240,6 +317,13 @@ export class WaitingRoom extends Scene
         this.roomImage.setPosition(this.roomOffsetX, this.roomOffsetY);
         this.roomImage.setDepth(0);
 
+        this.clocks.forEach((clock, index) =>
+        {
+            const pos = this.textureToWorld(CLOCKS[index].x, CLOCKS[index].y);
+
+            clock.setPosition(pos.x, pos.y).setScale((CLOCK_WIDTH * this.roomScale) / clock.width);
+        });
+
         const train = this.textureToWorld(this.trainTextureX, TRAIN_TEXTURE.y);
 
         this.train.setPosition(train.x, train.y);
@@ -275,6 +359,21 @@ export class WaitingRoom extends Scene
         this.layoutWool();
     }
 
+    // 캐릭터가 앉으면 털실이 작게 시작해 통통 튀며 나타난다.
+    revealWool ()
+    {
+        this.wool.setVisible(true);
+        this.woolIntro = 0;
+        this.layoutWool();
+        this.tweens.add({
+            targets: this,
+            woolIntro: 1,
+            duration: 650,
+            ease: 'Back.easeOut',
+            onUpdate: () => this.layoutWool()
+        });
+    }
+
     // 털실을 플레이어가 앉은 벤치 옆에 놓는다.
     layoutWool ()
     {
@@ -284,14 +383,27 @@ export class WaitingRoom extends Scene
         // wool02/wool03일 때는 이미지만 더 위로 올리고, 라벨 위치(pos)는 그대로 둔다.
         const extraLift = this.wool.texture.key !== 'wool01' ? WOOL.lift02 * this.roomScale : 0;
 
-        this.wool.setPosition(pos.x, pos.y - extraLift);
-        this.wool.setScale((width * this.roomScale) / this.wool.width);
+        // 등장 중에는 작고 흐릿하게 아래에서 시작해 통통 튀며 자리를 잡는다.
+        const intro = this.woolIntro;
+
+        this.wool.setPosition(pos.x, pos.y - extraLift + (1 - intro) * 16 * this.roomScale);
+        this.wool.setScale(((width * this.roomScale) / this.wool.width) * intro);
+        this.wool.setAlpha(Math.min(1, intro * 2));
         this.wool.setDepth(this.getSeatedPlayerDepth());
 
         // 라벨은 React가 그린다. 위치(캔버스 px)와 글자 크기만 알려준다.
         const fontSize = Math.max(11, Math.round(WOOL.labelFontSize * this.roomScale * (this.isMobileLayout ? WOOL.mobileScale : 1)));
 
-        EventBus.emit('wool-label', { x: pos.x, y: pos.y, fontSize, visible: this.wool.visible });
+        EventBus.emit('wool-label', { x: pos.x, y: pos.y, fontSize, visible: this.wool.visible && intro > 0.6 });
+
+        this.debugWools.forEach(({ slot, image, label }) =>
+        {
+            const woolPos = getWoolTextureForBench(slot, width, WOOL.gap);
+            const world = this.textureToWorld(woolPos.x, woolPos.y - WOOL.lift);
+
+            image.setPosition(world.x, world.y).setScale((width * this.roomScale) / image.width).setDepth(100);
+            label.setPosition(world.x, world.y).setDepth(101);
+        });
     }
 
     getPlayerSeatWorld (getSeatTexture = getPlayerSeatTexture)
@@ -472,8 +584,7 @@ export class WaitingRoom extends Scene
             this.player.setOrigin(0.5, 1);
             this.player.setPosition(x, y);
             this.syncPlayerDepth();
-            this.wool.setVisible(true);
-            this.layoutWool();
+            this.revealWool();
 
             const sitHoldMs = Math.max(0, SIT_MS - TURN_MS);
 

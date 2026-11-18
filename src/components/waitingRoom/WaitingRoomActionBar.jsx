@@ -1,23 +1,18 @@
 export default function WaitingRoomActionBar ({ passedTrains, onEndWaiting })
 {
     const hasCount = typeof passedTrains === 'number';
-    const countLabel = hasCount ? `${passedTrains}대` : '—';
 
     return (
         <section className="waiting-room-actions" aria-label="대기실 액션">
             <p className="waiting-room-train-pill">
+                {/* 아이콘만 있는 배경 이미지. 글자는 아이콘 오른쪽에 직접 그린다. */}
                 <img
                     className="waiting-room-train-pill-bg"
-                    src="/assets/ui/waiting-room/train-passed-bar.png"
-                    srcSet="/assets/ui/waiting-room/train-passed-bar-sm.png 384w, /assets/ui/waiting-room/train-passed-bar.png 848w"
-                    sizes="(max-width: 640px) 128px, 220px"
+                    src="/assets/ui/waiting-room/train-passed-bar-sm.png"
                     alt=""
                     aria-hidden="true"
                 />
-                {/* 숫자만 — 「대」는 train-passed-bar.png에 포함 */}
-                <span className="waiting-room-train-pill-value" aria-label={hasCount ? `지나간 열차 ${countLabel}` : undefined}>
-                    {hasCount ? passedTrains : '—'}
-                </span>
+                <span className="waiting-room-train-pill-text">지나간 열차 {hasCount ? passedTrains : '—'}대</span>
             </p>
             <div className="waiting-room-action-buttons">
                 <button type="button" className="waiting-room-broadcast" disabled aria-disabled="true">
