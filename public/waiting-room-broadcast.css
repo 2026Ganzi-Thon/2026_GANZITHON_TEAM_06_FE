@@ -412,10 +412,15 @@
         top: 0;
         bottom: 0;
         width: var(--broadcast-side-width);
+        padding: 10px; /* 선택 칸이 박스 가장자리에 붙지 않게 여백을 둔다 */
     }
 
     .waiting-room-broadcast-state-box {
         left: calc(100% + 8px);
+    }
+
+    .waiting-room-broadcast-chip-state {
+        font-size: 10px; /* 상황 문구는 칸 안에 여유 있게 들어가도록 조금 줄인다 */
     }
 
     .waiting-room-broadcast-emotion-box {
