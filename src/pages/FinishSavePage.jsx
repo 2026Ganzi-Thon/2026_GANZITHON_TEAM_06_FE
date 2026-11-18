@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import PageLinks from '../components/common/PageLinks';
 
 const NICKNAME_MAX = 12;
 
@@ -37,7 +36,6 @@ export default function FinishSavePage()
                         처음으로
                     </button>
                 </section>
-                <PageLinks />
             </main>
         );
     }
@@ -58,8 +56,12 @@ export default function FinishSavePage()
                         </button>
                         <hr className="finish-save-divider" />
                         <p className="finish-save-desc">다시 기다릴까요?</p>
-                        {/* TODO: 대기실 선택 창으로 이동 (추후 추가 예정) */}
-                        <button type="button" className="finish-save-btn finish-save-btn-primary finish-save-btn-start">
+                        {/* 온보딩의 대기실 선택 단계로 바로 이동한다. */}
+                        <button
+                            type="button"
+                            className="finish-save-btn finish-save-btn-primary finish-save-btn-start"
+                            onClick={() => navigate('/', { state: { startStep: 'room' } })}
+                        >
                             네, 새 승차권 받기 &gt;
                         </button>
                         <button
@@ -71,7 +73,6 @@ export default function FinishSavePage()
                         </button>
                                     </div>
                 </section>
-                <PageLinks />
             </main>
         );
     }
@@ -158,7 +159,6 @@ export default function FinishSavePage()
                         </button>
                     </div>
                 </section>
-                <PageLinks />
             </main>
         );
     }
@@ -184,7 +184,6 @@ export default function FinishSavePage()
                     나중에 할게요.
                 </button>
             </section>
-            <PageLinks />
         </main>
     );
 }
