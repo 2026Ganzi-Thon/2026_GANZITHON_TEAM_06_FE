@@ -1,7 +1,7 @@
 // 대기실 배경(1442×841) 텍스처 좌표 — 발 위치(벤치 하단 중앙)
 export const WAITING_ROOM_TEXTURE_WIDTH = 1442;
 
-export const WAITING_ROOM_BENCH_WIDTH_TEXTURE = 148;
+export const WAITING_ROOM_BENCH_WIDTH_TEXTURE = 320;
 
 // 벤치당 3좌석 (148tex 너비 기준 좌·중·우)
 export const SHEEP_SEATS_PER_BENCH = 3;
@@ -10,8 +10,8 @@ export const SHEEP_SEATS_PER_BENCH = 3;
 export const BENCH_SEAT_WORLD_Y_NUDGE = [6, 0, -6];
 
 // 벤치 앵커(하단 중앙) 기준 안장: 좌하 → 우상 대각선
-const SEAT_ORIGIN = { x: -36, y: -60 };
-const SEAT_AXIS_STEP = { dx: 36, dy: -6 };
+const SEAT_ORIGIN = { x: -48, y: -60 };
+const SEAT_AXIS_STEP = { dx: 48, dy: -6 };
 
 function getBenchSeatOffset (seatIndex)
 {
@@ -33,12 +33,14 @@ const LEFT_BENCH_Y_BASE = [
 
 const LEFT_COLUMN_Y_NUDGE = -30;
 const RIGHT_COLUMN_Y_NUDGE = -80;
+// 화면 아래. y가 클수록 아래다.
+const BENCH_DOWN_NUDGE = 100;
 
 const LEFT_BENCH_ANCHORS = LEFT_BENCH_Y_BASE.map((anchor, index) =>
 {
     const yNudge = index % 2 === 0 ? LEFT_COLUMN_Y_NUDGE : RIGHT_COLUMN_Y_NUDGE;
 
-    return { x: anchor.x, y: anchor.y + yNudge };
+    return { x: anchor.x, y: anchor.y + yNudge + BENCH_DOWN_NUDGE };
 });
 
 function buildSymmetricBenchSlots ()

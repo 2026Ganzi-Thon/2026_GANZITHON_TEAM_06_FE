@@ -12,6 +12,7 @@ import {
     getWoolTextureForBench,
     PLAYER_BENCH_ANCHOR,
     PLAYER_BENCH_SEAT_INDEX,
+    SHEEP_SEATS_PER_BENCH,
     PLAYER_SEATED_DIRECTION,
     WAITING_ROOM_BENCH_SLOTS,
     WAITING_ROOM_BENCH_WIDTH_TEXTURE
@@ -32,6 +33,10 @@ const WALK_MS = 1200;
 const SIT_MS = 1800;
 const TURN_MS = 450;
 const PLAYER_SEAT_WORLD_Y_NUDGE = 13;
+// 예전 앉기·걷기 스프라이트(48px)와 같은 화면 크기로 맞춘다.
+const PASSENGER_DISPLAY_PX = 88;
+// 화면 위. 벤치 좌표는 그대로 두고 양만 올린다.
+const SHEEP_LIFT_Y = 80;
 // 양·의자보다 앞에 두는 머리 위 표시 깊이.
 const HEAD_MARKER_DEPTH = 20000;
 // 시안 기준 머리 위 칩·리액션 너비(화면 px, roomScale을 곱한다).
@@ -591,10 +596,10 @@ export class WaitingRoom extends Scene
             }
 
             const seat = this.getSeatWorldFromBench(config.benchSlotIndex, config.seatIndex);
-            const sprite = this.add.sprite(seat.x, seat.y, `sit-${config.sitDirection}`);
+            const sprite = this.add.sprite(seat.x, seat.y, 'passenger');
 
-            sprite.setOrigin(0.5, 1);
-            sprite.setDepth(this.getSeatedSpriteDepth(seat.y, slot));
+            this.applyPassengerFrame(sprite, slot.flipX);
+            sprite.setDepth(this.getSeatedSpriteDepth(slot, config.seatIndex));
 
             this.registerOccupant(config.ticketId, sprite, {
                 isLocal: false,
@@ -612,7 +617,7 @@ export class WaitingRoom extends Scene
         const texture = getBenchSeatTexture(slot, seatIndex);
         const world = this.textureToWorld(texture.x, texture.y);
 
-        world.y += PLAYER_SEAT_WORLD_Y_NUDGE;
+        world.y += PLAYER_SEAT_WORLD_Y_NUDGE - SHEEP_LIFT_Y;
         world.y += getBenchSeatWorldYNudge(seatIndex);
 
         return world;
@@ -632,7 +637,8 @@ export class WaitingRoom extends Scene
             const seat = this.getSeatWorldFromBench(benchSlotIndex, seatIndex);
 
             occupant.sprite.setPosition(seat.x, seat.y);
-            occupant.sprite.setDepth(this.getSeatedSpriteDepth(seat.y, slot));
+            occupant.sprite.setFlipX(Boolean(slot.flipX));
+            occupant.sprite.setDepth(this.getSeatedSpriteDepth(slot, seatIndex));
         });
     }
 
@@ -643,11 +649,13 @@ export class WaitingRoom extends Scene
         return benchFoot.y + 1;
     }
 
-    getSeatedSpriteDepth (worldFootY, benchSlot)
+    getSeatedSpriteDepth (benchSlot, seatIndex = 0)
     {
         const benchDepth = this.getSeatedDepthAtBenchFoot(benchSlot);
+        // 왼쪽 기준 좌하단(0)이 앞, 우상단이 뒤다.
+        const frontOrder = (SHEEP_SEATS_PER_BENCH - 1) - seatIndex;
 
-        return Math.max(benchDepth + 1, worldFootY + 0.5);
+        return benchDepth + 1 + frontOrder;
     }
 
     getSpriteFootDepth (sprite)
@@ -851,7 +859,7 @@ export class WaitingRoom extends Scene
         const seatTexture = getSeatTexture();
         const seat = this.textureToWorld(seatTexture.x, seatTexture.y);
 
-        seat.y += PLAYER_SEAT_WORLD_Y_NUDGE;
+        seat.y += PLAYER_SEAT_WORLD_Y_NUDGE - SHEEP_LIFT_Y;
         seat.y += getBenchSeatWorldYNudge(PLAYER_BENCH_SEAT_INDEX);
 
         return seat;
@@ -859,17 +867,13 @@ export class WaitingRoom extends Scene
 
     createBenches ()
     {
-        const benchTexture = this.textures.get('waiting-room-bench');
-        const source = benchTexture.getSourceImage();
-        const nativeWidth = source.width;
-
-        const scaleInTexture = WAITING_ROOM_BENCH_WIDTH_TEXTURE / nativeWidth;
-
-        WAITING_ROOM_BENCH_SLOTS.forEach(() =>
+        WAITING_ROOM_BENCH_SLOTS.forEach((_, index) =>
         {
-            const bench = this.add.image(0, 0, 'waiting-room-bench');
+            const key = index % 2 === 0 ? 'bench-vine' : 'bench-plain';
+            const bench = this.add.image(0, 0, key);
+
             bench.setOrigin(0.5, 1);
-            bench._textureScale = scaleInTexture;
+            bench._textureScale = WAITING_ROOM_BENCH_WIDTH_TEXTURE / bench.width;
             this.benches.push(bench);
         });
 
@@ -909,7 +913,7 @@ export class WaitingRoom extends Scene
             const entrance = this.textureToWorld(ENTRANCE_TEXTURE.x, ENTRANCE_TEXTURE.y);
 
             this.player = this.add.sprite(entrance.x, entrance.y, 'walk-south-west-0');
-            this.player.setOrigin(0.5, 1);
+            this.applyPassengerFrame(this.player, false);
             this.player.setDepth(entrance.y);
             this.walkToSeat();
         }
@@ -939,7 +943,7 @@ export class WaitingRoom extends Scene
 
         if (this.player?.active)
         {
-            return this.getSeatedSpriteDepth(this.player.y, playerSlot);
+            return this.getSeatedSpriteDepth(playerSlot, PLAYER_BENCH_SEAT_INDEX);
         }
 
         return this.getSeatedDepthAtBenchFoot(playerSlot);
@@ -952,7 +956,7 @@ export class WaitingRoom extends Scene
             return;
         }
 
-        const isSeated = this.player.texture?.key?.startsWith('sit-');
+        const isSeated = this.player.texture?.key === 'passenger';
 
         if (isSeated || this._atBenchSeat)
         {
@@ -964,11 +968,18 @@ export class WaitingRoom extends Scene
         }
     }
 
+    applyPassengerFrame (sprite, flipX)
+    {
+        sprite.setOrigin(0.5, 1);
+        sprite.setFlipX(Boolean(flipX));
+        sprite.setScale(PASSENGER_DISPLAY_PX / sprite.width);
+    }
+
     placeSeatedPlayer (x, y)
     {
         this._atBenchSeat = true;
-        this.player = this.add.sprite(x, y, `sit-${PLAYER_SEATED_DIRECTION}`);
-        this.player.setOrigin(0.5, 1);
+        this.player = this.add.sprite(x, y, 'passenger');
+        this.applyPassengerFrame(this.player, false);
         this.syncPlayerDepth();
         this.bindLocalPlayerTicket(this.localTicketId);
         this.wool.setVisible(true);
@@ -978,19 +989,16 @@ export class WaitingRoom extends Scene
 
     createWalkAnimations ()
     {
-        ['south-east', 'south-west'].forEach((direction) =>
+        if (this.anims.exists('walk-south-west'))
         {
-            if (this.anims.exists(`walk-${direction}`))
-            {
-                return;
-            }
+            return;
+        }
 
-            this.anims.create({
-                key: `walk-${direction}`,
-                frames: [0, 1, 2, 3, 4, 5].map((frame) => ({ key: `walk-${direction}-${frame}` })),
-                frameRate: 10,
-                repeat: -1
-            });
+        this.anims.create({
+            key: 'walk-south-west',
+            frames: [0, 1, 2].map((frame) => ({ key: `walk-south-west-${frame}` })),
+            frameRate: 10,
+            repeat: -1
         });
     }
 
@@ -1031,8 +1039,8 @@ export class WaitingRoom extends Scene
                 return;
             }
 
-            this.player.setTexture(`sit-${PLAYER_SEATED_DIRECTION}`);
-            this.player.setOrigin(0.5, 1);
+            this.player.setTexture('passenger');
+            this.applyPassengerFrame(this.player, false);
             this.player.setPosition(x, y);
             this.syncPlayerDepth();
             this.bindLocalPlayerTicket(this.localTicketId);
