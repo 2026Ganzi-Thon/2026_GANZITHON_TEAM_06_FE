@@ -186,8 +186,8 @@ export default function OnboardingPage ()
                 }
                 catch (error)
                 {
-                    // 보관 중인 승차권을 수정할 권한이 없으면(로그인 필요 등) 새로 발급합니다.
-                    if (error.code !== 'AUTH_LOGIN_REQUIRED')
+                    // 보관 중인 승차권을 수정할 권한이 없거나(로그인 필요 등) 이미 끝난 기다림이면 새로 발급합니다.
+                    if (error.code !== 'AUTH_LOGIN_REQUIRED' && error.code !== 'TICKET_ALREADY_ENDED')
                     {
                         throw error;
                     }

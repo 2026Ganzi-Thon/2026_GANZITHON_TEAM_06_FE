@@ -5,7 +5,7 @@ import AppHeader from '../components/common/AppHeader';
 import BlanketArt from '../components/common/BlanketArt';
 import PanelFrame from '../components/common/PanelFrame';
 import { toPiece } from '../data/pieces';
-import { readPendingPieces } from '../game/onboardingSession';
+import { clearOnboardingTrip, readPendingPieces } from '../game/onboardingSession';
 import { clearAuth, readAccessToken } from '../services/auth';
 import { fetchBlanketPieces } from '../services/blanketPieces';
 import { fetchMe, updatePublicSetting } from '../services/users';
@@ -37,6 +37,7 @@ export default function MySheepPage()
     const [pieces, setPieces] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+    const [isLoggedOut, setIsLoggedOut] = useState(false);
     // 임시 조각함: 브라우저에 보관한 비로그인 조각
     const tempPieces = useMemo(() => readPendingPieces().map((data, i) => ({ ...toPiece(data, i), temp: true })), []);
     const isPublic = me?.isPublic ?? false;
@@ -66,8 +67,11 @@ export default function MySheepPage()
     }, [token]);
 
     // 로그아웃은 서버 API가 없어 토큰만 지웁니다.
+    // 로그인 중에 받은 승차권은 로그아웃하면 다룰 수 없어 함께 지우고, 닫으면 이전 화면 대신 처음 화면으로 갑니다.
     const handleLogout = () => {
         clearAuth();
+        clearOnboardingTrip();
+        setIsLoggedOut(true);
         setToken(null);
         setMe(null);
         setPieces([]);
@@ -82,6 +86,8 @@ export default function MySheepPage()
             setError(e.message);
         }
     };
+
+    const exitPath = isLoggedOut ? '/' : exitTo;
 
     const goSave = () => navigate('/finish-waiting/save', { state: { from: 'my-sheep' } });
 
@@ -114,7 +120,7 @@ export default function MySheepPage()
                 <img src="/assets/backgrounds/onboarding/icon-announce.svg" alt="" />
             </button>
             <PanelFrame
-                onExit={exitTo ? () => navigate(exitTo) : undefined}
+                onExit={exitPath ? () => navigate(exitPath) : undefined}
                 actions={isBlanket && token && (
                     <button type="button" className="my-sheep-logout" onClick={handleLogout}>
                         <img src="/assets/mypage/logout.png" alt="" />

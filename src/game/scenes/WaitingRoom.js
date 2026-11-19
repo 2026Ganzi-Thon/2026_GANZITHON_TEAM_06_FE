@@ -235,9 +235,9 @@ export class WaitingRoom extends Scene
         };
         EventBus.on('wool-reset', this.handleWoolReset);
 
-        // 씬이 꺼질 때 EventBus 구독을 풀어 준다. (연결하지 않으면 씬이 다시 만들어진 뒤에도 옛 씬이 이벤트를 받아 'sys' 오류가 난다)
+        // 씬이 꺼지거나 게임째 파괴될 때 EventBus 구독을 풀어 준다.
+        // (게임 destroy는 shutdown 없이 destroy만 보내서, 둘 다 걸지 않으면 다음 입장 때 옛 씬이 이벤트를 받아 터진다)
         this.events.once('shutdown', this.shutdown, this);
-        // 페이지를 떠나 game.destroy()로 지워질 때는 'shutdown'이 아니라 'destroy'만 발생하므로 같이 연결한다.
         this.events.once('destroy', this.shutdown, this);
 
         EventBus.emit('current-scene-ready', this);
@@ -245,6 +245,9 @@ export class WaitingRoom extends Scene
 
     shutdown ()
     {
+        this.events.off('shutdown', this.shutdown, this);
+        this.events.off('destroy', this.shutdown, this);
+
         if (this.handleBenchLayoutRefresh)
         {
             EventBus.off('refresh-waiting-room-bench-layout', this.handleBenchLayoutRefresh);
