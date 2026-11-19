@@ -892,11 +892,28 @@ section.onboarding-start {
     top: 71.92%;
     width: 24.52%;
     height: 18.75%;
-    justify-content: center; /* 점선 사각형 가운데 */
+    justify-content: flex-start;
     font-size: min(24px, 3.75cqw); /* 승차권이 640px일 때 24px */
     font-weight: 500;
     color: #ff6e52;
     line-height: 1;
+}
+
+/* NO는 점선 칸 왼쪽에 고정하고, 번호는 그 오른쪽에만 붙는다. */
+.ticket-number-label,
+.ticket-number-value {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.ticket-number-label {
+    left: 24%;
+}
+
+.ticket-number-value {
+    left: calc(24% + 2.2ch);
+    transform-origin: left center;
 }
 
 .ticket-sparkle {
@@ -957,7 +974,7 @@ section.onboarding-start {
     animation: ticket-print 0.8s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
 }
 
-.ticket.is-issued .ticket-number {
+.ticket.is-issued .ticket-number-value {
     animation: ticket-number-stamp 0.5s ease-out 0.7s both;
 }
 
@@ -972,8 +989,8 @@ section.onboarding-start {
 }
 
 @keyframes ticket-number-stamp {
-    from { opacity: 0; transform: scale(1.6); }
-    to { opacity: 1; transform: scale(1); }
+    from { opacity: 0; transform: translateY(-50%) scale(1.6); }
+    to { opacity: 1; transform: translateY(-50%) scale(1); }
 }
 
 @keyframes ticket-sparkle-pulse {
@@ -985,7 +1002,7 @@ section.onboarding-start {
     .ticket-step-top,
     .ticket-step-bottom,
     .ticket.is-issued,
-    .ticket.is-issued .ticket-number,
+    .ticket.is-issued .ticket-number-value,
     .ticket-step.is-issued .ticket-sparkle {
         animation: none;
     }

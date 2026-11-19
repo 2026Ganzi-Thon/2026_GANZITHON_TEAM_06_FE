@@ -290,7 +290,10 @@ export default function OnboardingPage ()
                         <img src="/assets/ui/ticket.png" alt="승차권. 출발역 잠시역 3번홈, 도착예정 알 수 없음" />
                         <p className="ticket-destination">{selectedRoom.name}</p>
                         <p className="ticket-number">
-                            NO. {issuedTicketNumber ?? '—'}
+                            <span className="ticket-number-label">NO</span>
+                            {issuedTicketNumber != null && (
+                                <span className="ticket-number-value">. {issuedTicketNumber}</span>
+                            )}
                         </p>
                     </article>
                     <div className="ticket-step-bottom">
