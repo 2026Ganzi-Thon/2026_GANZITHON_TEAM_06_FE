@@ -29,6 +29,7 @@ import { markWaitingRoomEntered, shouldPlayWaitingRoomEntrance } from '../waitin
 const ROOM_TEXTURE_WIDTH = 1442;
 const ROOM_TEXTURE_HEIGHT = 841;
 const LANDSCAPE_ZOOM = 1.25; // 가로 모바일에서 배경을 키우는 배율
+const PC_CHARACTER_BOOST = 1.3; // PC에서 양을 키우는 배율
 const MOBILE_CHARACTER_BOOST = 1.5; // 모바일(세로·가로)에서 양·역장을 추가로 키우는 배율
 const MOBILE_MAX_HEIGHT = 520; // style.css의 가로 모바일 기준(520px)과 같은 값
 const WALK_MS = 1200;
@@ -41,9 +42,12 @@ const PASSENGER_DISPLAY_PX = 100;
 const WALK_SCALE_RATIO = 0.83;
 // 화면 위. 벤치 좌표는 그대로 두고 양만 올린다.
 const SHEEP_LIFT_Y = 80;
+const MOBILE_SHEEP_EXTRA_LIFT = 15; // 모바일(세로·가로)에서 양을 올리는 높이
+const PC_SHEEP_EXTRA_LIFT = 20; // PC에서 양을 살짝 더 올리는 높이(배경 텍스처 px)
 // 대기실 복도 가운데. 발 위치(배경 텍스처).
 const STATION_MASTER_TEXTURE = { x: 721, y: 420 };
-const STATION_MASTER_DISPLAY_PX = 66;
+const STATION_MASTER_DISPLAY_PX = 90; // PC 기준 크기
+const STATION_MASTER_MOBILE_DISPLAY_PX = 99; // 모바일 크기(66px × 1.5)
 // 양·의자보다 앞에 두는 머리 위 표시 깊이.
 const HEAD_MARKER_DEPTH = 20000;
 // 시안 기준 머리 위 칩·리액션 너비(화면 px, roomScale을 곱한다).
@@ -449,7 +453,7 @@ export class WaitingRoom extends Scene
             this.roomScale *= LANDSCAPE_ZOOM;
         }
 
-        this.characterBoost = isPortrait ? MOBILE_CHARACTER_BOOST : 1;
+        this.characterBoost = isPortrait ? MOBILE_CHARACTER_BOOST : PC_CHARACTER_BOOST;
 
         const roomWidth = ROOM_TEXTURE_WIDTH * this.roomScale;
         const roomHeight = ROOM_TEXTURE_HEIGHT * this.roomScale;
@@ -640,7 +644,7 @@ export class WaitingRoom extends Scene
         const world = this.textureToWorld(texture.x, texture.y);
 
         // 화면이 작아지면 양이 뜨는 높이도 같이 줄어야 벤치에 맞게 앉는다.
-        world.y += (PLAYER_SEAT_WORLD_Y_NUDGE - SHEEP_LIFT_Y + getBenchSeatWorldYNudge(seatIndex)) * this.roomScale;
+        world.y += (PLAYER_SEAT_WORLD_Y_NUDGE - SHEEP_LIFT_Y - (this.isMobileLayout ? MOBILE_SHEEP_EXTRA_LIFT : PC_SHEEP_EXTRA_LIFT) + getBenchSeatWorldYNudge(seatIndex)) * this.roomScale;
 
         return world;
     }
@@ -904,7 +908,7 @@ export class WaitingRoom extends Scene
         const seat = this.textureToWorld(seatTexture.x, seatTexture.y);
 
         // 화면이 작아지면 양이 뜨는 높이도 같이 줄어야 벤치에 맞게 앉는다.
-        seat.y += (PLAYER_SEAT_WORLD_Y_NUDGE - SHEEP_LIFT_Y + getBenchSeatWorldYNudge(PLAYER_BENCH_SEAT_INDEX)) * this.roomScale;
+        seat.y += (PLAYER_SEAT_WORLD_Y_NUDGE - SHEEP_LIFT_Y - (this.isMobileLayout ? MOBILE_SHEEP_EXTRA_LIFT : PC_SHEEP_EXTRA_LIFT) + getBenchSeatWorldYNudge(PLAYER_BENCH_SEAT_INDEX)) * this.roomScale;
 
         return seat;
     }
@@ -1023,7 +1027,7 @@ export class WaitingRoom extends Scene
         const pos = this.textureToWorld(STATION_MASTER_TEXTURE.x, STATION_MASTER_TEXTURE.y);
 
         this.stationMaster.setPosition(pos.x, pos.y);
-        this.stationMaster.setScale((STATION_MASTER_DISPLAY_PX * this.roomScale * (this.characterBoost ?? 1)) / this.stationMaster.width);
+        this.stationMaster.setScale(((this.isMobileLayout ? STATION_MASTER_MOBILE_DISPLAY_PX : STATION_MASTER_DISPLAY_PX) * this.roomScale) / this.stationMaster.width);
         this.stationMaster.setDepth(pos.y);
         EventBus.emit('station-master-anchor', {
             x: pos.x,
