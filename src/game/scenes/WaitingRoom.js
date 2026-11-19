@@ -28,23 +28,29 @@ import { markWaitingRoomEntered, shouldPlayWaitingRoomEntrance } from '../waitin
 
 const ROOM_TEXTURE_WIDTH = 1442;
 const ROOM_TEXTURE_HEIGHT = 841;
+const LANDSCAPE_ZOOM = 1.25; // 가로 모바일에서 배경을 키우는 배율
+const MOBILE_CHARACTER_BOOST = 1.5; // 모바일(세로·가로)에서 양·역장을 추가로 키우는 배율
 const MOBILE_MAX_HEIGHT = 520; // style.css의 가로 모바일 기준(520px)과 같은 값
 const WALK_MS = 1200;
 const SIT_MS = 1800;
 const TURN_MS = 450;
 const PLAYER_SEAT_WORLD_Y_NUDGE = 13;
 // 예전 앉기·걷기 스프라이트(48px)와 같은 화면 크기로 맞춘다.
-const PASSENGER_DISPLAY_PX = 88;
+const PASSENGER_DISPLAY_PX = 100;
+// 걷는 양은 이미지 안에서 몸이 더 크게 차지해서, 앉은 양과 몸 크기가 같아 보이도록 줄이는 비율.
+const WALK_SCALE_RATIO = 0.83;
 // 화면 위. 벤치 좌표는 그대로 두고 양만 올린다.
 const SHEEP_LIFT_Y = 80;
 // 대기실 복도 가운데. 발 위치(배경 텍스처).
-const STATION_MASTER_TEXTURE = { x: 721, y: 400 };
-const STATION_MASTER_DISPLAY_PX = 120;
+const STATION_MASTER_TEXTURE = { x: 721, y: 420 };
+const STATION_MASTER_DISPLAY_PX = 66;
 // 양·의자보다 앞에 두는 머리 위 표시 깊이.
 const HEAD_MARKER_DEPTH = 20000;
 // 시안 기준 머리 위 칩·리액션 너비(화면 px, roomScale을 곱한다).
 const ME_CHIP_WIDTH = 34;
 const REACTION_ICON_WIDTH = 40;
+// 리액션 아이콘이 양 머리 위에 뜨는 높이(양 키 대비). 작을수록 아래로 내려온다.
+const REACTION_ICON_HEAD_RATIO = 0.8;
 
 // 창문 밖 열차 (배경 텍스처 기준 중심 좌표·너비). 위치는 여기서 조정한다.
 const TRAIN_TEXTURE = { y: 225, width: 330 };
@@ -287,6 +293,7 @@ export class WaitingRoom extends Scene
 
             const seat = this.getPlayerSeatWorld(mod.getPlayerSeatTexture);
 
+            this.scalePassenger(this.player);
             this.player.setPosition(seat.x, seat.y);
             this.syncPlayerDepth();
             this.layoutDemoOccupants();
@@ -432,8 +439,17 @@ export class WaitingRoom extends Scene
         const fitHeight = viewHeight / ROOM_TEXTURE_HEIGHT;
         // 모바일(세로 화면, 또는 높이가 낮은 가로 화면)은 꽉 채우고, 그 외에는 배경 전체가 보이게 한다.
         const isPortrait = viewHeight > viewWidth || viewHeight <= MOBILE_MAX_HEIGHT;
+        const isShortLandscape = viewWidth > viewHeight && viewHeight <= MOBILE_MAX_HEIGHT;
 
         this.roomScale = isPortrait ? Math.max(fitWidth, fitHeight) : Math.min(fitWidth, fitHeight);
+
+        // 가로 모바일은 배경을 키우고(가장자리는 드래그로 확인), 양·역장은 더 키운다.
+        if (isShortLandscape)
+        {
+            this.roomScale *= LANDSCAPE_ZOOM;
+        }
+
+        this.characterBoost = isPortrait ? MOBILE_CHARACTER_BOOST : 1;
 
         const roomWidth = ROOM_TEXTURE_WIDTH * this.roomScale;
         const roomHeight = ROOM_TEXTURE_HEIGHT * this.roomScale;
@@ -451,7 +467,7 @@ export class WaitingRoom extends Scene
             const minOffsetY = viewHeight - roomHeight;
 
             // 세로는 배경 맨 위에서 시작한다. 안내판은 배경 위쪽에 붙어 있어서 아래로 내리면 같이 올라간다.
-            this.roomOffsetY = Math.min(0, Math.max(minOffsetY, this._panY ?? 0));
+            this.roomOffsetY = Math.min(0, Math.max(minOffsetY, this._panY ?? (isShortLandscape ? viewHeight / 2 - seat.y * this.roomScale : 0)));
         }
 
         this.isMobileLayout = isPortrait;
@@ -542,7 +558,7 @@ export class WaitingRoom extends Scene
         this.wool.setPosition(pos.x, pos.y - extraLift + (1 - intro) * 16 * this.roomScale);
         this.wool.setScale(((width * this.roomScale) / this.wool.width) * intro);
         this.wool.setAlpha(Math.min(1, intro * 2));
-        this.wool.setDepth(this.getSeatedPlayerDepth());
+        this.wool.setDepth(HEAD_MARKER_DEPTH - 1); // 의자·양보다 항상 앞
 
         // 라벨은 React가 그린다. 위치(캔버스 px)와 글자 크기만 알려준다.
         const fontSize = Math.max(11, Math.round(WOOL.labelFontSize * this.roomScale * (this.isMobileLayout ? WOOL.mobileScale : 1)));
@@ -623,8 +639,8 @@ export class WaitingRoom extends Scene
         const texture = getBenchSeatTexture(slot, seatIndex);
         const world = this.textureToWorld(texture.x, texture.y);
 
-        world.y += PLAYER_SEAT_WORLD_Y_NUDGE - SHEEP_LIFT_Y;
-        world.y += getBenchSeatWorldYNudge(seatIndex);
+        // 화면이 작아지면 양이 뜨는 높이도 같이 줄어야 벤치에 맞게 앉는다.
+        world.y += (PLAYER_SEAT_WORLD_Y_NUDGE - SHEEP_LIFT_Y + getBenchSeatWorldYNudge(seatIndex)) * this.roomScale;
 
         return world;
     }
@@ -642,8 +658,13 @@ export class WaitingRoom extends Scene
             const slot = WAITING_ROOM_BENCH_SLOTS[benchSlotIndex];
             const seat = this.getSeatWorldFromBench(benchSlotIndex, seatIndex);
 
+            this.scalePassenger(occupant.sprite);
             occupant.sprite.setPosition(seat.x, seat.y);
-            occupant.sprite.setFlipX(Boolean(slot.flipX));
+            // 눈 감은 이미지는 좌우가 따로 있어서 뒤집지 않는다. (배경을 끌거나 화면이 바뀔 때 반대로 돌아가는 것을 막는다)
+            if (occupant.sprite.texture.key === 'passenger')
+            {
+                occupant.sprite.setFlipX(Boolean(slot.flipX));
+            }
             occupant.sprite.setDepth(this.getSeatedSpriteDepth(slot, seatIndex));
         });
     }
@@ -762,6 +783,13 @@ export class WaitingRoom extends Scene
             entry.icon.destroy();
         }
 
+        // 눈 감은 모습을 원래 앉은 모습으로 되돌린다.
+        if (entry.sprite?.active && entry.sprite.texture.key.startsWith('passenger-closed'))
+        {
+            entry.sprite.setTexture('passenger');
+            this.applyPassengerFrame(entry.sprite, entry.flipX);
+        }
+
         this.reactionEmojisByTicketId.delete(key);
 
         if (this.isLocalReaction(ticketId))
@@ -794,7 +822,7 @@ export class WaitingRoom extends Scene
                 return;
             }
 
-            const offsetY = sprite.displayHeight * 0.92;
+            const offsetY = sprite.displayHeight * REACTION_ICON_HEAD_RATIO;
 
             entry.icon.setPosition(sprite.x, sprite.y - offsetY);
             entry.icon.setDepth(HEAD_MARKER_DEPTH + 1);
@@ -822,7 +850,17 @@ export class WaitingRoom extends Scene
 
         this.clearReactionEmoji(ticketId);
 
-        const offsetY = sprite.displayHeight * 0.92;
+        // 앉은 양이면 눈을 감는다. 왼쪽 벤치 양은 left, 오른쪽 벤치 양은 right 이미지를 쓴다.
+        const flipX = sprite.flipX;
+        const canClose = sprite.texture.key === 'passenger';
+
+        if (canClose)
+        {
+            sprite.setTexture(flipX ? 'passenger-closed-right' : 'passenger-closed-left');
+            this.applyPassengerFrame(sprite, false);
+        }
+
+        const offsetY = sprite.displayHeight * REACTION_ICON_HEAD_RATIO;
         const icon = this.add.image(sprite.x, sprite.y - offsetY, texture).setOrigin(0.5, 1);
 
         icon.setScale((REACTION_ICON_WIDTH * this.roomScale) / icon.width);
@@ -852,7 +890,7 @@ export class WaitingRoom extends Scene
             });
         });
 
-        this.reactionEmojisByTicketId.set(key, { icon, timer });
+        this.reactionEmojisByTicketId.set(key, { icon, timer, sprite, flipX });
 
         if (this.isLocalReaction(ticketId))
         {
@@ -865,8 +903,8 @@ export class WaitingRoom extends Scene
         const seatTexture = getSeatTexture();
         const seat = this.textureToWorld(seatTexture.x, seatTexture.y);
 
-        seat.y += PLAYER_SEAT_WORLD_Y_NUDGE - SHEEP_LIFT_Y;
-        seat.y += getBenchSeatWorldYNudge(PLAYER_BENCH_SEAT_INDEX);
+        // 화면이 작아지면 양이 뜨는 높이도 같이 줄어야 벤치에 맞게 앉는다.
+        seat.y += (PLAYER_SEAT_WORLD_Y_NUDGE - SHEEP_LIFT_Y + getBenchSeatWorldYNudge(PLAYER_BENCH_SEAT_INDEX)) * this.roomScale;
 
         return seat;
     }
@@ -875,7 +913,8 @@ export class WaitingRoom extends Scene
     {
         WAITING_ROOM_BENCH_SLOTS.forEach((_, index) =>
         {
-            const key = index % 2 === 0 ? 'bench-vine' : 'bench-plain';
+            // 슬롯은 (왼쪽, 오른쪽) 쌍이다. 양쪽 맨 바깥 2개(쌍 0, 2번)만 덩굴 벤치, 나머지는 민무늬.
+            const key = [0, 2].includes(Math.floor(index / 2)) ? 'bench-vine' : 'bench-plain';
             const bench = this.add.image(0, 0, key);
 
             bench.setOrigin(0.5, 1);
@@ -984,7 +1023,7 @@ export class WaitingRoom extends Scene
         const pos = this.textureToWorld(STATION_MASTER_TEXTURE.x, STATION_MASTER_TEXTURE.y);
 
         this.stationMaster.setPosition(pos.x, pos.y);
-        this.stationMaster.setScale(STATION_MASTER_DISPLAY_PX / this.stationMaster.width);
+        this.stationMaster.setScale((STATION_MASTER_DISPLAY_PX * this.roomScale * (this.characterBoost ?? 1)) / this.stationMaster.width);
         this.stationMaster.setDepth(pos.y);
         EventBus.emit('station-master-anchor', {
             x: pos.x,
@@ -996,7 +1035,15 @@ export class WaitingRoom extends Scene
     {
         sprite.setOrigin(0.5, 1);
         sprite.setFlipX(Boolean(flipX));
-        sprite.setScale(PASSENGER_DISPLAY_PX / sprite.width);
+        this.scalePassenger(sprite);
+    }
+
+    // 양 크기는 배경(벤치)과 같이 roomScale을 따라간다. 그래야 작은 화면에서도 벤치와 비율이 맞는다.
+    scalePassenger (sprite)
+    {
+        const isWalking = sprite.texture.key.startsWith('walk-');
+
+        sprite.setScale(((PASSENGER_DISPLAY_PX * this.roomScale * (this.characterBoost ?? 1)) / sprite.width) * (isWalking ? WALK_SCALE_RATIO : 1));
     }
 
     placeSeatedPlayer (x, y)

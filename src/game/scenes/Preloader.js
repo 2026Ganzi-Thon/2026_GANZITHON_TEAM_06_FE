@@ -38,7 +38,11 @@ export class Preloader extends Scene
         this.load.image('reaction-heart', 'ui/waiting-room/reaction-heart.png');
 
         this.load.image('passenger', 'characters/passenger/sit/passenger.png');
-        this.load.image('station-master', 'characters/station-master/waiting-room.png');
+        // 리액션을 받는 동안 보여 줄 눈 감은 앉은 양 (왼쪽/오른쪽을 바라봄)
+        this.load.image('passenger-closed-left', 'characters/passenger/walk/passenger-closed-left.png');
+        this.load.image('passenger-closed-right', 'characters/passenger/walk/passenger-closed-right.png');
+        // portrait.svg는 80x116 크기라 8배로 래스터화한다.
+        this.load.svg('station-master', 'characters/station-master/portrait.svg', { scale: 8 });
 
         for (let frame = 0; frame < WALK_FRAME_COUNT; frame += 1)
         {

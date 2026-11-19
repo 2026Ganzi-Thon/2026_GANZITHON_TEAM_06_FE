@@ -1699,6 +1699,19 @@ body:has(main.waiting-room) {
     .waiting-room .waiting-room-top {
         width: 66%;
         max-width: 284px;
+        /* 안내방송·기다림 마치기 버튼 바로 위, 오른쪽에 붙인다(스크롤을 따라가지 않는다). */
+        position: absolute;
+        top: auto;
+        left: auto;
+        right: 8px;
+        bottom: 100px; /* zoom이 곱해져 화면에서는 약 62px */
+        translate: none;
+        zoom: 0.62; /* 틀을 작게 줄이고, 아래에서 글자는 그만큼 키운다 */
+    }
+
+    .waiting-room.waiting-room-header-hidden .waiting-room-overlay > .waiting-room-top {
+        opacity: 1;
+        pointer-events: auto;
     }
 
     .waiting-room .waiting-room-marquee {
@@ -1722,16 +1735,16 @@ body:has(main.waiting-room) {
 
     /* 좁은 상단바에서 방 이름·설명이 틀을 넘지 않게 글자를 줄인다 */
     .waiting-room .waiting-room-top-copy h1 {
-        font-size: 11px;
+        font-size: 17px;
     }
 
     .waiting-room .waiting-room-top-copy p {
-        font-size: 7px;
+        font-size: 11px;
     }
 
     /* 좁은 상단바에서 '현재 대기 N명'이 칸을 넘지 않게 한다 */
     .waiting-room .waiting-room-top-waiting {
-        font-size: 11px;
+        font-size: 17px;
     }
 
     .waiting-room .waiting-room-marquee-stats-label {
