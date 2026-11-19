@@ -68,6 +68,16 @@ export function changeKnittingPattern (ticketId)
     });
 }
 
+// 온보딩에서 상태 칩만 바꿉니다. 번호와 도안은 유지되고, 응답은 승차권 상태와 같습니다.
+export function updateTicketMoodChip (ticketId, moodChip)
+{
+    return apiFetch(`/api/v1/tickets/${ticketId}`, {
+        method: 'PATCH',
+        headers: guestHeaders(),
+        body: JSON.stringify({ moodChip: moodChip ?? null })
+    });
+}
+
 // 다 뜬 털실 톡톡을 역장에게 전달했다고 기록합니다. { knittingDeliveredAt } (이미 전달했으면 처음 시각)
 export function deliverKnitting (ticketId)
 {

@@ -7,11 +7,12 @@ import ChoiceButton from '../components/common/ChoiceButton';
 import {
     MOOD_CHIPS,
     ROOM_DESCRIPTIONS,
+    readOnboardingTrip,
     saveOnboardingTrip
 } from '../game/onboardingSession';
 import { requestWaitingRoomEntrance } from '../game/waitingRoomEntry';
 import { fetchRooms } from '../services/rooms';
-import { createTicket } from '../services/tickets';
+import { createTicket, updateTicketMoodChip } from '../services/tickets';
 
 const STEP_START = 'start';
 const STEP_GREETING = 'greeting';
@@ -126,25 +127,32 @@ export default function OnboardingPage ()
 
         try
         {
-            const ticket = await createTicket({
-                roomCode,
-                moodChip: moodChip ?? null
-            });
+            const existingTrip = readOnboardingTrip();
+            const sameRoomTicket = existingTrip?.ticketId && existingTrip.roomCode === roomCode;
+            const ticket = sameRoomTicket
+                ? await updateTicketMoodChip(existingTrip.ticketId, moodChip ?? null)
+                : await createTicket({
+                    roomCode,
+                    moodChip: moodChip ?? null
+                });
 
-            setIssuedTicketNumber(ticket.ticketNumber);
+            setIssuedTicketNumber(ticket.ticketNumber ?? existingTrip?.ticketNumber);
             saveOnboardingTrip({
+                ...existingTrip,
                 roomCode,
                 roomName: selectedRoom?.name,
                 moodChip: ticket.moodChip,
-                ticketId: ticket.ticketId,
-                ticketNumber: ticket.ticketNumber,
+                ticketId: ticket.ticketId ?? existingTrip?.ticketId,
+                ticketNumber: ticket.ticketNumber ?? existingTrip?.ticketNumber,
                 displayName: ticket.displayName,
-                patternCode: ticket.patternCode,
-                guestToken: ticket.guestToken,
+                patternCode: ticket.patternCode ?? existingTrip?.patternCode,
+                guestToken: ticket.guestToken ?? existingTrip?.guestToken,
                 // 열차 시각 계산용: 시작 시각, 열차 간격, 기기 시계와 서버 시계의 차이
-                startedAt: ticket.startedAt,
-                trainIntervalMs: ticket.trainIntervalMs,
-                clockOffsetMs: Date.parse(ticket.serverTime) - Date.now()
+                startedAt: ticket.startedAt ?? existingTrip?.startedAt,
+                trainIntervalMs: ticket.trainIntervalMs ?? existingTrip?.trainIntervalMs,
+                clockOffsetMs: ticket.serverTime
+                    ? Date.parse(ticket.serverTime) - Date.now()
+                    : existingTrip?.clockOffsetMs
             });
             requestWaitingRoomEntrance();
             setIsIssued(true);
