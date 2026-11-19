@@ -22,16 +22,6 @@ const STEP_TICKET = 'ticket';
 // 승차권이 발급되는 연출을 보여 준 뒤 대기실로 넘어가기까지의 시간(ms)
 const ISSUE_ANIMATION_MS = 2200;
 
-function SpeakerIcon ()
-{
-    return (
-        <svg className="onboarding-speaker" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor" />
-            <path d="M16.5 9.5a4 4 0 010 5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-        </svg>
-    );
-}
-
 export default function OnboardingPage ()
 {
     const navigate = useNavigate();
@@ -129,12 +119,28 @@ export default function OnboardingPage ()
         {
             const existingTrip = readOnboardingTrip();
             const sameRoomTicket = existingTrip?.ticketId && existingTrip.roomCode === roomCode;
-            const ticket = sameRoomTicket
-                ? await updateTicketMoodChip(existingTrip.ticketId, moodChip ?? null)
-                : await createTicket({
-                    roomCode,
-                    moodChip: moodChip ?? null
-                });
+            let ticket = null;
+
+            if (sameRoomTicket)
+            {
+                try
+                {
+                    ticket = await updateTicketMoodChip(existingTrip.ticketId, moodChip ?? null);
+                }
+                catch (error)
+                {
+                    // 보관 중인 승차권을 수정할 권한이 없으면(로그인 필요 등) 새로 발급합니다.
+                    if (error.code !== 'AUTH_LOGIN_REQUIRED')
+                    {
+                        throw error;
+                    }
+                }
+            }
+
+            ticket ??= await createTicket({
+                roomCode,
+                moodChip: moodChip ?? null
+            });
 
             setIssuedTicketNumber(ticket.ticketNumber ?? existingTrip?.ticketNumber);
             saveOnboardingTrip({
@@ -220,7 +226,7 @@ export default function OnboardingPage ()
             {step === STEP_GREETING && (
                 <>
                     <p className="onboarding-broadcast">
-                        <SpeakerIcon />
+                        <img className="onboarding-speaker" src="/assets/backgrounds/onboarding/icon-announce.svg" alt="" />
                         잠시 정차합니다. 서두르지 않아도 괜찮습니다.
                     </p>
                 </>
@@ -285,6 +291,7 @@ export default function OnboardingPage ()
                         nextDisabled={chatContent.nextDisabled}
                         onNext={chatContent.onNext}
                         closing={step === STEP_TICKET}
+                        typing
                     >
                         {chatContent.extra}
                     </ChatPanel>
@@ -315,7 +322,7 @@ export default function OnboardingPage ()
                             disabled={ticketLoading || isIssued}
                             onClick={handleReceiveTicket}
                         >
-                            <img className="ticket-pill-icon" src="/assets/backgrounds/onboarding/ticket_icon.png" alt="" />
+                            <img className="ticket-pill-icon" src="/assets/backgrounds/onboarding/icon-ticket.svg" alt="" />
                             {ticketLoading ? '발급 중…' : isIssued ? '발급 완료' : '승차권 받기'}
                         </button>
                     </div>
