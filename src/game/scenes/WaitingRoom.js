@@ -291,7 +291,10 @@ export class WaitingRoom extends Scene
             return;
         }
 
-        const hasYarn = (countPassedTrains(readOnboardingTrip()) ?? 0) >= 1;
+        const trip = readOnboardingTrip();
+        const hasYarn = typeof trip?.trainCount === 'number'
+            ? trip.trainCount >= 1
+            : (countPassedTrains(trip) ?? 0) >= 1;
         const key = hasYarn ? 'wool02' : 'wool01';
 
         if (this.wool.texture.key === key)
