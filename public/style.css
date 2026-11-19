@@ -1744,7 +1744,7 @@ body:has(main.waiting-room) {
 
     /* 좁은 상단바에서 '현재 대기 N명'이 칸을 넘지 않게 한다 */
     .waiting-room .waiting-room-top-waiting {
-        font-size: 17px;
+        font-size: 13px;
     }
 
     .waiting-room .waiting-room-marquee-stats-label {
@@ -1813,6 +1813,12 @@ body:has(main.waiting-room) {
 
     .waiting-room .waiting-room-top-waiting {
         font-size: 9px;
+    }
+
+    /* 가로 모바일: 입석 표시를 작게 하고 오른쪽 끝으로 붙인다 */
+    .waiting-room .waiting-room-top-standing {
+        font-size: 8px;
+        padding-right: 2px;
     }
 
     /* 가로 모바일에서는 누르기 쉽게 방송·마치기 버튼을 조금 키운다 */
@@ -2301,4 +2307,36 @@ body:has(main.waiting-room) {
     .waiting-room-train-pill,
     .waiting-room-broadcast,
     .waiting-room-end { animation: none; }
+}
+
+.waiting-room-error {
+    position: absolute;
+    left: 50%;
+    bottom: 96px;
+    z-index: 30;
+    transform: translateX(-50%);
+    max-width: 90%;
+    padding: 8px 14px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.75);
+    color: #fff;
+    font-size: 14px;
+    text-align: center;
+}
+
+/* '현재 대기 N명' 칸 바로 아래에 입석 인원을 가운데 맞춰 보여 준다 */
+.waiting-room-top-standing {
+    position: absolute;
+    top: 74%;
+    right: 4.5%;
+    width: 34%;
+    margin: 2px 0 0;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--color-brown-stroke);
+    text-align: right;
+    /* 오른쪽 끝이 '현재 대기' 칸의 둥근 모서리와 어긋나지 않게 조금 안쪽으로 둔다 */
+    padding-right: 12px;
+    white-space: nowrap;
 }

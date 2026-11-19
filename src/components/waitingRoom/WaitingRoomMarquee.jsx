@@ -1,3 +1,5 @@
+import { useLayoutEffect, useRef, useState } from 'react';
+
 function formatStat (value)
 {
     if (typeof value !== 'number')
@@ -16,6 +18,18 @@ export default function WaitingRoomMarquee ({
 })
 {
     const isBroadcasting = phase === 'broadcasting';
+    const messageRef = useRef(null);
+    const textRef = useRef(null);
+    // 방송 문구가 전광판 폭보다 긴 만큼(px). 0보다 크면 PC에서 문구가 한 줄로 흘러간다.
+    const [overflowPx, setOverflowPx] = useState(0);
+
+    useLayoutEffect(() =>
+    {
+        if (isBroadcasting && messageRef.current && textRef.current)
+        {
+            setOverflowPx(Math.max(0, textRef.current.scrollWidth - messageRef.current.clientWidth));
+        }
+    }, [isBroadcasting, broadcastMessage]);
     const showDefaultMessage = phase !== 'broadcasting';
 
     return (
@@ -39,8 +53,14 @@ export default function WaitingRoomMarquee ({
                             도착 시간은 알 수 없어요.
                         </p>
                     ) : (
-                        <p className="waiting-room-marquee-message waiting-room-marquee-message-broadcast">
-                            {broadcastMessage.replace('양님이 ', '양님이\n')}
+                        <p ref={messageRef} className="waiting-room-marquee-message waiting-room-marquee-message-broadcast">
+                            <span
+                                ref={textRef}
+                                className={overflowPx > 0 ? 'waiting-room-marquee-scroll is-scrolling' : 'waiting-room-marquee-scroll'}
+                                style={{ '--marquee-shift': `${overflowPx}px` }}
+                            >
+                                {broadcastMessage}
+                            </span>
                         </p>
                     )}
                 </div>
