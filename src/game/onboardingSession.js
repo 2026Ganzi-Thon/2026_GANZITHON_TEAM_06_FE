@@ -54,6 +54,11 @@ export function readOnboardingTrip ()
     }
 }
 
+export function clearOnboardingTrip ()
+{
+    sessionStorage.removeItem(TRIP_KEY);
+}
+
 export function readGuestToken ()
 {
     return sessionStorage.getItem(GUEST_TOKEN_KEY);
