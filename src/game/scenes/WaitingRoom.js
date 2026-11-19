@@ -358,7 +358,6 @@ export class WaitingRoom extends Scene
         this.trainTimer = this.time.delayedCall(delay, () =>
         {
             this.playTrainPass();
-            this.scheduleTrain();
         });
     }
 
