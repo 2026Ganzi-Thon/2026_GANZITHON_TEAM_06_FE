@@ -18,7 +18,7 @@ import {
 } from '../objects/waitingRoomBenches';
 import { countPassedTrains, msUntilNextTrain, readOnboardingTrip } from '../onboardingSession';
 import {
-    getReactionEmoji,
+    getReactionTexture,
     WAITING_ROOM_BIND_LOCAL_PLAYER,
     WAITING_ROOM_REACTION_EVENT,
     WAITING_ROOM_REACTION_REMOTE
@@ -32,6 +32,11 @@ const WALK_MS = 1200;
 const SIT_MS = 1800;
 const TURN_MS = 450;
 const PLAYER_SEAT_WORLD_Y_NUDGE = 13;
+// 양·의자보다 앞에 두는 머리 위 표시 깊이.
+const HEAD_MARKER_DEPTH = 20000;
+// 시안 기준 머리 위 칩·리액션 너비(화면 px, roomScale을 곱한다).
+const ME_CHIP_WIDTH = 34;
+const REACTION_ICON_WIDTH = 40;
 
 // 창문 밖 열차 (배경 텍스처 기준 중심 좌표·너비). 위치는 여기서 조정한다.
 const TRAIN_TEXTURE = { y: 225, width: 330 };
@@ -123,6 +128,7 @@ export class WaitingRoom extends Scene
         this.localTicketId = null;
         this.occupantsByTicketId = new Map();
         this.reactionEmojisByTicketId = new Map();
+        this.meChip = this.add.image(0, 0, 'me-chip').setOrigin(0.5, 1).setDepth(HEAD_MARKER_DEPTH).setVisible(false);
         this._panX = null;
         this._panY = null;
         this._canPanX = false;
@@ -205,6 +211,7 @@ export class WaitingRoom extends Scene
 
         this.trainSound?.stop();
         this.clearAllReactionEmojis();
+        this.meChip?.destroy();
         this.occupantsByTicketId.clear();
 
         if (this.handleTrainClockSync)
@@ -485,6 +492,7 @@ export class WaitingRoom extends Scene
             this.syncAllReactionEmojiPositions();
         }
 
+        this.layoutMeChip();
         this.layoutWool();
     }
 
@@ -557,10 +565,12 @@ export class WaitingRoom extends Scene
             return;
         }
 
+        const previous = this.occupantsByTicketId.get(ticketId);
+
         this.occupantsByTicketId.set(ticketId, {
             sprite,
             isLocal: Boolean(options.isLocal),
-            seatConfig: options.seatConfig ?? null
+            seatConfig: options.seatConfig ?? previous?.seatConfig ?? null
         });
     }
 
@@ -645,6 +655,44 @@ export class WaitingRoom extends Scene
         return sprite.y + 1;
     }
 
+    isLocalReaction (ticketId)
+    {
+        if (!this.player?.active)
+        {
+            return false;
+        }
+
+        if (ticketId == null)
+        {
+            return true;
+        }
+
+        return ticketId === this.localTicketId;
+    }
+
+    layoutMeChip ()
+    {
+        if (!this.meChip)
+        {
+            return;
+        }
+
+        const show = this.player?.active && this._atBenchSeat && !this.reactionEmojisByTicketId.has(this.reactionKey(this.localTicketId));
+
+        this.meChip.setVisible(show);
+
+        if (!show)
+        {
+            return;
+        }
+
+        const headY = this.player.y - this.player.displayHeight * 0.92;
+
+        this.meChip.setPosition(this.player.x, headY);
+        this.meChip.setScale((ME_CHIP_WIDTH * this.roomScale) / this.meChip.width);
+        this.meChip.setDepth(HEAD_MARKER_DEPTH);
+    }
+
     resolveOccupantSprite (ticketId)
     {
         if (ticketId != null && this.occupantsByTicketId.has(ticketId))
@@ -690,12 +738,17 @@ export class WaitingRoom extends Scene
             entry.timer.remove(false);
         }
 
-        if (entry.text?.active)
+        if (entry.icon?.active)
         {
-            entry.text.destroy();
+            entry.icon.destroy();
         }
 
         this.reactionEmojisByTicketId.delete(key);
+
+        if (this.isLocalReaction(ticketId))
+        {
+            this.layoutMeChip();
+        }
     }
 
     clearAllReactionEmojis ()
@@ -717,17 +770,16 @@ export class WaitingRoom extends Scene
             const ticketId = key === 'local' ? this.localTicketId : Number(key);
             const sprite = this.resolveOccupantSprite(ticketId);
 
-            if (!sprite?.active || !entry.text?.active)
+            if (!sprite?.active || !entry.icon?.active)
             {
                 return;
             }
 
             const offsetY = sprite.displayHeight * 0.92;
-            const fontSize = Math.max(18, Math.round(26 * this.roomScale));
 
-            entry.text.setPosition(sprite.x, sprite.y - offsetY);
-            entry.text.setDepth(this.getSpriteFootDepth(sprite) + 2);
-            entry.text.setFontSize(`${fontSize}px`);
+            entry.icon.setPosition(sprite.x, sprite.y - offsetY);
+            entry.icon.setDepth(HEAD_MARKER_DEPTH + 1);
+            entry.icon.setScale((REACTION_ICON_WIDTH * this.roomScale) / entry.icon.width);
         });
     }
 
@@ -740,47 +792,53 @@ export class WaitingRoom extends Scene
             return;
         }
 
+        const texture = getReactionTexture(reactionType);
+
+        if (!texture)
+        {
+            return;
+        }
+
         const key = this.reactionKey(ticketId);
 
         this.clearReactionEmoji(ticketId);
 
-        const emoji = getReactionEmoji(reactionType);
         const offsetY = sprite.displayHeight * 0.92;
-        const fontSize = Math.max(18, Math.round(26 * this.roomScale));
+        const icon = this.add.image(sprite.x, sprite.y - offsetY, texture).setOrigin(0.5, 1);
 
-        const text = this.add.text(sprite.x, sprite.y - offsetY, emoji, {
-            fontFamily: 'Pretendard Variable, Pretendard, Apple Color Emoji, Segoe UI Emoji, sans-serif',
-            fontSize: `${fontSize}px`
-        });
-
-        text.setOrigin(0.5, 1);
-        text.setDepth(this.getSpriteFootDepth(sprite) + 2);
-        text.setAlpha(0);
+        icon.setScale((REACTION_ICON_WIDTH * this.roomScale) / icon.width);
+        icon.setDepth(HEAD_MARKER_DEPTH + 1);
+        icon.setAlpha(0);
 
         this.tweens.add({
-            targets: text,
+            targets: icon,
             alpha: 1,
-            y: text.y - 6,
+            y: icon.y - 6,
             duration: 180,
             ease: 'Sine.easeOut'
         });
 
         const timer = this.time.delayedCall(REACTION_FEEDBACK_MS, () =>
         {
-            if (!text.active)
+            if (!icon.active)
             {
                 return;
             }
 
             this.tweens.add({
-                targets: text,
+                targets: icon,
                 alpha: 0,
                 duration: 200,
                 onComplete: () => this.clearReactionEmoji(ticketId)
             });
         });
 
-        this.reactionEmojisByTicketId.set(key, { text, timer });
+        this.reactionEmojisByTicketId.set(key, { icon, timer });
+
+        if (this.isLocalReaction(ticketId))
+        {
+            this.layoutMeChip();
+        }
     }
 
     getPlayerSeatWorld (getSeatTexture = getPlayerSeatTexture)
@@ -910,6 +968,7 @@ export class WaitingRoom extends Scene
         this.bindLocalPlayerTicket(this.localTicketId);
         this.wool.setVisible(true);
         this.layoutWool();
+        this.layoutMeChip();
     }
 
     createWalkAnimations ()
@@ -973,6 +1032,7 @@ export class WaitingRoom extends Scene
             this.syncPlayerDepth();
             this.bindLocalPlayerTicket(this.localTicketId);
             this.revealWool();
+            this.layoutMeChip();
 
             const sitHoldMs = Math.max(0, SIT_MS - TURN_MS);
 
