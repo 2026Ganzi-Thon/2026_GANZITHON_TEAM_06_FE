@@ -44,6 +44,9 @@ export class Preloader extends Scene
         this.load.svg('wool02', 'ui/waiting-room/wool02.svg', { scale: 3 });
         this.load.svg('wool03', 'ui/waiting-room/wool03.svg', { scale: 3 });
         this.load.svg('window', 'ui/waiting-room/window.svg', { width: 1450, height: 725 });
+        this.load.image('me-chip', 'ui/waiting-room/me-chip.png');
+        this.load.image('reaction-nod', 'ui/waiting-room/reaction-nod.png');
+        this.load.image('reaction-heart', 'ui/waiting-room/reaction-heart.png');
 
         SIT_DIRECTIONS.forEach((direction) =>
         {
