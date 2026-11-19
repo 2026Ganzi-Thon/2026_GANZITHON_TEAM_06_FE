@@ -129,7 +129,7 @@ export default function FinishWaitingPage()
                     />
                 ))}
             </div>
-            <ChatPanel portrait={current.portrait} message={current.message} onNext={handleNext} closing={isChatClosing} />
+            <ChatPanel portrait={current.portrait} message={current.message} onNext={handleNext} closing={isChatClosing} typing />
         </main>
     );
 }

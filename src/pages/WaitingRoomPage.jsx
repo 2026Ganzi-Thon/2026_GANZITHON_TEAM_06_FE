@@ -531,6 +531,7 @@ export default function WaitingRoomPage ()
                         <ChatPanel
                             portrait="portrait04"
                             closing={isTrainChatClosing}
+                            typing
                             message={'열차가 지나갔어요. 털실 한 올 놓아 둘게요,\n심심할 때 만져 봐도 좋아요.'}
                         />
                     </div>
