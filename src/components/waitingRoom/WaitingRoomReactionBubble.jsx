@@ -81,12 +81,6 @@ export default function WaitingRoomReactionBubble ({
 
     return (
         <div className="waiting-room-reaction-layer" role="presentation">
-            <button
-                type="button"
-                className="waiting-room-reaction-backdrop"
-                aria-label="리액션 닫기"
-                onClick={() => onDismiss?.()}
-            />
             <section
                 className={anchor ? 'waiting-room-reaction is-anchored' : 'waiting-room-reaction'}
                 aria-label="방송 리액션"
@@ -110,11 +104,6 @@ export default function WaitingRoomReactionBubble ({
                                 disabled={Boolean(activeReaction)}
                                 onClick={() => handleReaction('nod')}
                             >
-                                <img
-                                    className="waiting-room-reaction-btn-icon"
-                                    src="/assets/ui/waiting-room/reaction-btn-nod.png"
-                                    alt=""
-                                />
                                 끄덕끄덕
                             </button>
                             <span className="waiting-room-reaction-divider" aria-hidden="true" />
@@ -128,11 +117,6 @@ export default function WaitingRoomReactionBubble ({
                                 disabled={Boolean(activeReaction)}
                                 onClick={() => handleReaction('send')}
                             >
-                                <img
-                                    className="waiting-room-reaction-btn-icon"
-                                    src="/assets/ui/waiting-room/reaction-btn-heart.png"
-                                    alt=""
-                                />
                                 전해요
                             </button>
                         </div>
