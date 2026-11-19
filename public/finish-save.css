@@ -22,6 +22,19 @@
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: #e1a583 transparent;
+    animation: finish-save-panel-rise 0.45s ease-out both;
+}
+
+/* 등장: 아래에서 위로 올라오며 나타난다 (가운데 정렬 transform을 유지해야 한다) */
+@keyframes finish-save-panel-rise {
+    from { opacity: 0; transform: translate(-50%, calc(-50% + 28px)); }
+    to { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .finish-save-panel {
+        animation: none;
+    }
 }
 
 /* 내용이 패널보다 길면 줄어들지 않고 스크롤되게 한다 */
