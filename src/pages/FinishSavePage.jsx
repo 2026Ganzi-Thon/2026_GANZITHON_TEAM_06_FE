@@ -105,7 +105,7 @@ export default function FinishSavePage()
     if (isEnd) {
         return (
             <main className="finish-waiting-page">
-                <section className="finish-save-panel finish-save-panel-end">
+                <section key="end" className="finish-save-panel finish-save-panel-end">
                     <h1 className="finish-save-title">
                         여기까지예요.<br />창을 닫아도 괜찮아요.
                     </h1>
@@ -125,7 +125,7 @@ export default function FinishSavePage()
     if (doneTitle) {
         return (
             <main className="finish-waiting-page">
-                <section className="finish-save-panel finish-save-panel-done">
+                <section key="done" className="finish-save-panel finish-save-panel-done">
                     <div className="finish-save-scroll">
                         <h1 className="finish-save-title">{doneTitle}</h1>
                         <img className="finish-save-gift" src="/assets/storage/gift.png" alt="선물 상자" />
@@ -172,7 +172,7 @@ export default function FinishSavePage()
                         </div>
                     </div>
                 )}
-                <section className="finish-save-panel finish-save-panel-login">
+                <section key="login" className="finish-save-panel finish-save-panel-login">
                     <div className="finish-save-scroll">
                         <div className="finish-save-tabs">
                             <button
@@ -260,7 +260,7 @@ export default function FinishSavePage()
 
     return (
         <main className="finish-waiting-page">
-            <section className="finish-save-panel">
+            <section key="ask" className="finish-save-panel">
                 <h1 className="finish-save-title">담요 조각을 계정에 저장할까요?</h1>
                 <p className="finish-save-desc">저장하고 완성된 나의 담요를 확인하세요.</p>
                 <img className="finish-save-gift" src="/assets/storage/gift.png" alt="선물 상자" />

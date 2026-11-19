@@ -132,6 +132,7 @@ export class WaitingRoom extends Scene
         this.wool = this.add.image(0, 0, 'wool01').setOrigin(0.5, 1).setVisible(false);
         // 털실이 나타날 때의 등장 진행도(0~1). 1이면 평소 모습이다.
         this.woolIntro = 1;
+        this.meChipIntro = 1;
         // 털실이 한 올 쌓이기 전(wool01)에는 누를 수 없고, 쌓이면 wool02로 바뀌어 누르면 털실 톡톡이 열린다.
         this.wool.on('pointerdown', () =>
         {
@@ -830,8 +831,10 @@ export class WaitingRoom extends Scene
             return;
         }
 
-        const headY = this.player.y - this.player.displayHeight * 0.92;
+        // 처음 앉을 때는 아래에서 위로 올라오며 나타난다.
+        const headY = this.player.y - this.player.displayHeight * 0.92 + (1 - this.meChipIntro) * 16 * this.roomScale;
 
+        this.meChip.setAlpha(this.meChipIntro);
         this.meChip.setPosition(this.player.x, headY);
         this.meChip.setScale((ME_CHIP_WIDTH * this.roomScale) / this.meChip.width);
         this.meChip.setDepth(HEAD_MARKER_DEPTH);
@@ -1190,22 +1193,29 @@ export class WaitingRoom extends Scene
 
     walkToSeat ()
     {
-        const seat = this.getPlayerSeatWorld();
+        const progress = { t: 0 };
 
         this._atBenchSeat = false;
         this.player.setOrigin(0.5, 1);
         this.player.play('walk-south-west');
+        // 걷는 도중 시점을 옮겨도 어긋나지 않게, 목표 좌표 대신 진행도만 움직이고 위치는 매 프레임 현재 방 좌표로 계산한다.
         this.tweens.add({
-            targets: this.player,
-            x: seat.x,
-            y: seat.y,
+            targets: progress,
+            t: 1,
             duration: WALK_MS,
-            onUpdate: () => this.syncPlayerDepth(),
-            onComplete: () => this.finishSitting(seat.x, seat.y)
+            onUpdate: () =>
+            {
+                const from = this.textureToWorld(ENTRANCE_TEXTURE.x, ENTRANCE_TEXTURE.y);
+                const to = this.getPlayerSeatWorld();
+
+                this.player.setPosition(from.x + (to.x - from.x) * progress.t, from.y + (to.y - from.y) * progress.t);
+                this.syncPlayerDepth();
+            },
+            onComplete: () => this.finishSitting()
         });
     }
 
-    finishSitting (x, y)
+    finishSitting ()
     {
         if (!this.player?.active)
         {
@@ -1227,11 +1237,21 @@ export class WaitingRoom extends Scene
 
             this.player.setTexture('passenger');
             this.applyPassengerFrame(this.player, false);
-            this.player.setPosition(x, y);
+            const seat = this.getPlayerSeatWorld();
+
+            this.player.setPosition(seat.x, seat.y);
             this.syncPlayerDepth();
             this.bindLocalPlayerTicket(this.localTicketId);
             this.revealWool();
+            this.meChipIntro = 0;
             this.layoutMeChip();
+            this.tweens.add({
+                targets: this,
+                meChipIntro: 1,
+                duration: 450,
+                ease: 'Cubic.easeOut',
+                onUpdate: () => this.layoutMeChip()
+            });
 
             const sitHoldMs = Math.max(0, SIT_MS - TURN_MS);
 
