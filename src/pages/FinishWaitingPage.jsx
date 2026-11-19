@@ -123,7 +123,7 @@ export default function FinishWaitingPage()
         <main className="finish-waiting-page">
             <AppHeader collapseOnDrag />
             <div className="finish-waiting-menu">
-                <Link to="/waiting-room" className="finish-waiting-back">아직 더 기다릴래요 &gt;</Link>
+                {step === 0 && <Link to="/waiting-room" className="finish-waiting-back">아직 더 기다릴래요 &gt;</Link>}
                 {OPTIONS.map((option, index) => (
                     <ChoiceButton
                         key={option.title}
