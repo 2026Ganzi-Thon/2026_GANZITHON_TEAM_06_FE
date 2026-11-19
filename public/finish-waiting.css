@@ -98,6 +98,17 @@
     font-weight: 400;
 }
 
+/* 버튼 오른쪽의 짧은 글자 (온보딩 대기실 선택의 인원) */
+.finish-waiting-badge {
+    flex-shrink: 0;
+    padding: 4px 10px;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
 .finish-waiting-check {
     display: grid;
     place-items: center;
@@ -106,6 +117,10 @@
     height: 30px;
     border-radius: 50%;
     background: #fff;
+}
+
+.finish-waiting-check.is-empty {
+    visibility: hidden;
 }
 
 .finish-waiting-check img {
@@ -254,6 +269,11 @@
     }
 
     .finish-waiting-text span {
+        font-size: 10px;
+    }
+
+    .finish-waiting-badge {
+        padding: 2px 6px;
         font-size: 10px;
     }
 

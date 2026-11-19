@@ -11,7 +11,7 @@ import {
     saveOnboardingTrip
 } from '../game/onboardingSession';
 import { requestWaitingRoomEntrance } from '../game/waitingRoomEntry';
-import { fetchRooms } from '../services/rooms';
+import { fetchRoomOccupancy, fetchRooms } from '../services/rooms';
 import { createTicket, updateTicketMoodChip } from '../services/tickets';
 
 const STEP_START = 'start';
@@ -21,6 +21,21 @@ const STEP_STATUS = 'status';
 const STEP_TICKET = 'ticket';
 // 승차권이 발급되는 연출을 보여 준 뒤 대기실로 넘어가기까지의 시간(ms)
 const ISSUE_ANIMATION_MS = 2200;
+// 방 선택 화면에 있는 동안 방별 인원을 다시 불러오는 간격(ms). 서버가 밀어 주지 않아 직접 다시 조회한다.
+const OCCUPANCY_POLL_MS = 5000;
+
+// 방 버튼에 붙일 인원 글자. 서 있는 승객이 있을 때만 입석 수를 덧붙인다.
+function formatOccupancy (occupancy)
+{
+    if (!occupancy)
+    {
+        return null;
+    }
+
+    const waiting = `${occupancy.count}명 대기`;
+
+    return occupancy.standingCount > 0 ? `${waiting} · 입석 ${occupancy.standingCount}명` : waiting;
+}
 
 export default function OnboardingPage ()
 {
@@ -34,6 +49,8 @@ export default function OnboardingPage ()
     const [rooms, setRooms] = useState([]);
     const [roomsLoading, setRoomsLoading] = useState(false);
     const [roomsError, setRoomsError] = useState(null);
+    // 방 코드별 현재 인원. 불러오기 전이나 실패하면 비어 있어 인원 배지를 그리지 않는다.
+    const [occupancyByRoom, setOccupancyByRoom] = useState({});
     const [ticketLoading, setTicketLoading] = useState(false);
     const [ticketError, setTicketError] = useState(null);
     const [issuedTicketNumber, setIssuedTicketNumber] = useState(null);
@@ -81,6 +98,43 @@ export default function OnboardingPage ()
             loadRooms();
         }
     }, [step, rooms.length, roomsLoading, roomsError]);
+
+    // 방 선택 단계에 있는 동안만 방별 인원을 주기적으로 불러온다. 실패하면 마지막으로 받은 인원을 그대로 둔다.
+    useEffect(() =>
+    {
+        if (step !== STEP_ROOM)
+        {
+            return undefined;
+        }
+
+        let cancelled = false;
+
+        const loadOccupancy = async () =>
+        {
+            try
+            {
+                const list = await fetchRoomOccupancy();
+
+                if (!cancelled)
+                {
+                    setOccupancyByRoom(Object.fromEntries(list.map((item) => [item.roomCode, item])));
+                }
+            }
+            catch
+            {
+                // 인원은 보조 정보라 실패해도 방 선택은 그대로 할 수 있게 둔다.
+            }
+        };
+
+        loadOccupancy();
+        const intervalId = setInterval(loadOccupancy, OCCUPANCY_POLL_MS);
+
+        return () =>
+        {
+            cancelled = true;
+            clearInterval(intervalId);
+        };
+    }, [step]);
 
     // 승차권 화면에 들어오면 바로 벨 소리를 낸다. 자동재생 차단 등으로 실패해도 무시한다.
     useEffect(() =>
@@ -248,6 +302,7 @@ export default function OnboardingPage ()
                                         index={index + 1}
                                         title={room.name}
                                         subtitle={ROOM_DESCRIPTIONS[room.roomCode] ?? ''}
+                                        badge={formatOccupancy(occupancyByRoom[room.roomCode])}
                                         selected={room.roomCode === roomCode}
                                         onClick={() => setRoomCode(room.roomCode)}
                                     />
