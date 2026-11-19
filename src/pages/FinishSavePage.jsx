@@ -140,7 +140,7 @@ export default function FinishSavePage()
                         <button
                             type="button"
                             className="finish-save-btn finish-save-btn-later"
-                            onClick={() => navigate('/my-sheep', { replace: true, state: { exitTo: '/finish-waiting/save' } })}
+                            onClick={() => navigate('/my-sheep', { replace: true, state: { exitTo: location.state?.exitTo ?? '/finish-waiting/save' } })}
                         >
                             내 담요 보기
                         </button>

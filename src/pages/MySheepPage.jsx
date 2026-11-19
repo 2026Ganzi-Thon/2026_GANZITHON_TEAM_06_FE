@@ -89,7 +89,7 @@ export default function MySheepPage()
 
     const exitPath = isLoggedOut ? '/' : exitTo;
 
-    const goSave = () => navigate('/finish-waiting/save', { state: { from: 'my-sheep' } });
+    const goSave = () => navigate('/finish-waiting/save', { state: { from: 'my-sheep', exitTo } });
 
     // 로그인 전 안내 카드 (임시 보관 탭과 로그아웃 상태의 내 담요 탭에서 함께 씁니다)
     const promo = (
