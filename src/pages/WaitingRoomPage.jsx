@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import AppHeader from '../components/common/AppHeader';
 import ChatPanel from '../components/common/ChatPanel';
+import PassengerCard from '../components/waitingRoom/PassengerCard';
 import WaitingRoomActionBar from '../components/waitingRoom/WaitingRoomActionBar';
 import WaitingRoomBroadcastModal from '../components/waitingRoom/WaitingRoomBroadcastModal';
 import WaitingRoomMarquee from '../components/waitingRoom/WaitingRoomMarquee';
@@ -69,6 +70,8 @@ export default function WaitingRoomPage ()
     // 서버가 알려 준 접속자 목록과 내 좌석 번호(입석이면 null)
     const [roomState, setRoomState] = useState(null);
     const [roomError, setRoomError] = useState(null);
+    // 서버가 마지막으로 보내 준 승객 카드(PASSENGER_CARD)
+    const [passengerCard, setPassengerCard] = useState(null);
     const socketRef = useRef(null);
     // 지금 전광판에 나오는 방송 id. 리액션을 보낼 때 필요하다.
     const broadcastIdRef = useRef(null);
@@ -411,6 +414,11 @@ export default function WaitingRoomPage ()
                 });
             }
 
+            if (message.type === 'PASSENGER_CARD')
+            {
+                setPassengerCard(message);
+            }
+
             if (message.type === 'REACTION' && message.ticketNumber !== trip.ticketNumber)
             {
                 // 내 리액션은 누른 순간 이미 보여 줬으므로 다른 승객 것만 띄운다.
@@ -474,6 +482,12 @@ export default function WaitingRoomPage ()
         };
     }, [roomState]);
 
+    // 카드 컴포넌트가 승객이 바뀔 때마다 요청하므로 함수가 매 렌더 바뀌지 않게 둔다.
+    const handleRequestPassengerCard = useCallback((ticketNumber) =>
+    {
+        socketRef.current?.requestPassengerCard({ ticketNumber });
+    }, []);
+
     const handleEndWaiting = () => navigate('/finish-waiting');
 
     const handleOpenBroadcast = () =>
@@ -526,6 +540,7 @@ export default function WaitingRoomPage ()
                 <PhaserGame />
                 <WaitingRoomWoolLabel />
                 <WoolTokPanel />
+                <PassengerCard response={passengerCard} onRequest={handleRequestPassengerCard} />
                 {trainChat && (
                     <div className="waiting-room-train-chat">
                         <ChatPanel

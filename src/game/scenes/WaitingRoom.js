@@ -60,6 +60,8 @@ const MOBILE_REACTION_ICON_BOOST = 1.4;
 const REACTION_ICON_HEAD_RATIO = 0.8;
 // 모바일은 아이콘이 더 커서(MOBILE_REACTION_ICON_BOOST) 머리를 가리지 않게 더 위로 띄운다.
 const MOBILE_REACTION_ICON_HEAD_RATIO = 0.80;
+// 양을 누르고 뗄 때까지 이보다 많이 움직이면(배경 드래그) 승객 카드를 열지 않는다(화면 px).
+const PASSENGER_TAP_MAX_MOVE_PX = 8;
 
 // 창문 밖 열차 (배경 텍스처 기준 중심 좌표·너비). 위치는 여기서 조정한다.
 const TRAIN_TEXTURE = { y: 225, width: 330 };
@@ -701,6 +703,7 @@ export class WaitingRoom extends Scene
             const sprite = this.add.sprite(0, 0, 'passenger');
 
             this.applyPassengerFrame(sprite, slot.flipX);
+            this.enablePassengerTap(sprite, passenger.ticketNumber);
             this.registerOccupant(passenger.ticketNumber, sprite, { isLocal: false, seatConfig });
         });
 
@@ -715,6 +718,23 @@ export class WaitingRoom extends Scene
         });
 
         this.layoutDemoOccupants();
+    }
+
+    // 다른 승객의 양을 누르면 승객 카드를 열도록 React에 알린다.
+    // 양 이미지는 둘레가 투명해서 실제 그림이 있는 픽셀만 누를 수 있게 한다(옆 양이 대신 눌리지 않게).
+    enablePassengerTap (sprite, ticketNumber)
+    {
+        sprite.setData('ticketNumber', ticketNumber);
+        sprite.setInteractive({ useHandCursor: true, pixelPerfect: true });
+        sprite.on('pointerup', (pointer) =>
+        {
+            if (pointer.getDistance() > PASSENGER_TAP_MAX_MOVE_PX)
+            {
+                return;
+            }
+
+            EventBus.emit('passenger-card-open', { ticketNumber: sprite.getData('ticketNumber') });
+        });
     }
 
     getSeatWorldFromBench (benchSlotIndex, seatIndex)
