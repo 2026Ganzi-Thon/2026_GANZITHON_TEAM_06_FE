@@ -29,6 +29,8 @@ export class Preloader extends Scene
         }
 
         this.load.audio('train-sound', 'sounds/train.mp3');
+        this.load.audio('reaction-nod-sound', 'sounds/good.mp3');
+        this.load.audio('reaction-send-sound', 'sounds/heart.mp3');
         this.load.svg('wool01', 'ui/waiting-room/wool01.svg', { scale: 3 });
         this.load.svg('wool02', 'ui/waiting-room/wool02.svg', { scale: 3 });
         this.load.svg('wool03', 'ui/waiting-room/wool03.svg', { scale: 3 });
