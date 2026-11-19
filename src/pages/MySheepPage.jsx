@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 import AppHeader from '../components/common/AppHeader';
 import BlanketArt from '../components/common/BlanketArt';
@@ -25,6 +25,7 @@ export default function MySheepPage()
     const tab = searchParams.get('tab') === 'storage' ? 'storage' : 'blanket';
     const setTab = (key) => setSearchParams({ tab: key }, { replace: true });
     const navigate = useNavigate();
+    const exitTo = useLocation().state?.exitTo;
     const isBlanket = tab === 'blanket';
     const [token, setToken] = useState(readAccessToken);
     const [me, setMe] = useState(null);
@@ -77,7 +78,7 @@ export default function MySheepPage()
         }
     };
 
-    const goSave = () => navigate('/finish-waiting/save');
+    const goSave = () => navigate('/finish-waiting/save', { state: { from: 'my-sheep' } });
 
     // 로그인 전 안내 카드 (임시 보관 탭과 로그아웃 상태의 내 담요 탭에서 함께 씁니다)
     const promo = (
@@ -99,6 +100,7 @@ export default function MySheepPage()
         <main className="my-sheep-page">
             <AppHeader collapseOnDrag showMySheep={false} />
             <PanelFrame
+                onExit={exitTo ? () => navigate(exitTo) : undefined}
                 actions={isBlanket && token && (
                     <button type="button" className="my-sheep-logout" onClick={handleLogout}>
                         <img src="/assets/mypage/logout.png" alt="" />
