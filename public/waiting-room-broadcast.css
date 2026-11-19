@@ -217,50 +217,92 @@
     position: absolute;
     top: 42%;
     left: 50%;
-    width: min(72%, 320px);
+    width: min(88%, 420px);
     transform: translate(-50%, -50%);
     pointer-events: none;
 }
 
+.waiting-room-reaction.is-anchored {
+    top: auto;
+    /* 89.5%는 에셋에서 말풍선 꼬리 끝이 있는 높이입니다. */
+    transform: translate(-50%, -89.5%);
+}
+
 .waiting-room-reaction-bubble {
-    padding: var(--space-md);
-    border: 3px solid #f3d5bc;
-    border-radius: 16px;
-    background: rgb(255 252 247 / 96%);
-    box-shadow: 0 8px 24px rgb(62 42 34 / 18%);
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1400 / 560;
+    border: 0;
+    background: url('/assets/ui/waiting-room/reaction-bubble.png') center / 100% 100% no-repeat;
     pointer-events: auto;
 }
 
+.waiting-room-reaction-bubble-content {
+    position: absolute;
+    left: 9%;
+    right: 9%;
+    top: 16%;
+    bottom: 28%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+}
+
 .waiting-room-reaction-bubble p {
-    margin: 0 0 var(--space-sm);
+    margin: 0;
     font-size: 0.9rem;
     font-weight: 600;
-    line-height: 1.45;
-    color: var(--color-ink);
+    line-height: 1.3;
+    color: var(--color-brown-stroke);
     text-align: center;
 }
 
 .waiting-room-reaction-buttons {
     display: flex;
-    gap: var(--space-sm);
-    justify-content: center;
+    align-items: center;
+    gap: 8px;
+}
+
+.waiting-room-reaction-divider {
+    width: 1px;
+    align-self: stretch;
+    background: #e4cbb6;
 }
 
 .waiting-room-reaction-btn {
-    min-width: 5.5rem;
-    padding: 0.5rem 0.85rem;
-    border: 2px solid #e0c4ad;
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 0.4rem 0.7rem;
+    border: 0;
     border-radius: 999px;
-    background: #fff;
     font-size: 0.85rem;
     font-weight: 600;
-    color: var(--color-ink);
+    color: var(--color-brown-stroke);
     cursor: pointer;
 }
 
+.waiting-room-reaction-btn-nod {
+    background: #fbd789;
+}
+
+.waiting-room-reaction-btn-send {
+    background: #fba894;
+}
+
+.waiting-room-reaction-btn-icon {
+    width: auto;
+    height: 16px;
+    image-rendering: pixelated;
+    flex: none;
+}
+
 .waiting-room-reaction-btn.is-active {
-    border-color: #e891a8;
-    background: #ffe8ef;
+    box-shadow: inset 0 0 0 2px var(--color-brown-stroke);
 }
 
 .waiting-room-reaction-btn:disabled:not(.is-active) {

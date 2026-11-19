@@ -50,6 +50,7 @@ export default function WaitingRoomPage ()
     const [now, setNow] = useState(() => Date.now());
     const cooldownStorageKey = `waitingRoomBroadcastEndsAt:${trip?.roomCode ?? ''}`;
     const [reactionVisible, setReactionVisible] = useState(false);
+    const [stationMasterAnchor, setStationMasterAnchor] = useState(null);
     const [reactionBroadcasterTicketNumber, setReactionBroadcasterTicketNumber] = useState(null);
     const broadcastTimerRef = useRef(null);
     const cooldownTimerRef = useRef(null);
@@ -152,9 +153,16 @@ export default function WaitingRoomPage ()
             setIsHeaderHidden((hidden) => (panY < -HEADER_HIDE_PAN ? true : panY > -HEADER_SHOW_PAN ? false : hidden));
         };
 
-        EventBus.on('room-pan', handleRoomPan);
+        const handleStationMasterAnchor = (anchor) => setStationMasterAnchor(anchor);
 
-        return () => EventBus.off('room-pan', handleRoomPan);
+        EventBus.on('room-pan', handleRoomPan);
+        EventBus.on('station-master-anchor', handleStationMasterAnchor);
+
+        return () =>
+        {
+            EventBus.off('room-pan', handleRoomPan);
+            EventBus.off('station-master-anchor', handleStationMasterAnchor);
+        };
     }, []);
 
     const [passedTrains, setPassedTrains] = useState(() => countPassedTrains(trip));
@@ -437,6 +445,7 @@ export default function WaitingRoomPage ()
                     />
                 </div>
                 <WaitingRoomReactionBubble
+                    anchor={stationMasterAnchor}
                     broadcasterTicketNumber={reactionBroadcasterTicketNumber}
                     reactingTicketId={trip?.ticketId}
                     isVisible={reactionVisible}
