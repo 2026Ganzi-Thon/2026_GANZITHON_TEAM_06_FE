@@ -42,7 +42,7 @@ export function applyRoomEvent (state, message)
 
 // 대기실 소켓에 연결해 입장합니다.
 // onState(state): 접속자 목록이 바뀔 때, onEvent(message): BROADCAST·REACTION·ERROR 등 화면이 따로 처리할 메시지, onFatal(): 토큰 거부로 연결이 막혔을 때.
-// 반환: { disconnect, sendBroadcast, sendReaction }
+// 반환: { disconnect, sendBroadcast, sendReaction, requestPassengerCard }
 export function connectWaitingRoom ({ roomCode, ticketId, onState, onEvent, onFatal })
 {
     const accessToken = readAccessToken();
@@ -114,6 +114,8 @@ export function connectWaitingRoom ({ roomCode, ticketId, onState, onEvent, onFa
             client.disconnect();
         },
         sendBroadcast: ({ situationChipCode, moodChip }) => client.publish(`/app/rooms/${roomCode}/broadcast`, { situationChipCode, moodChip }),
-        sendReaction: ({ broadcastId, reaction }) => client.publish(`/app/rooms/${roomCode}/reaction`, { broadcastId, reaction })
+        sendReaction: ({ broadcastId, reaction }) => client.publish(`/app/rooms/${roomCode}/reaction`, { broadcastId, reaction }),
+        // 응답은 PASSENGER_CARD 메시지로 onEvent에 온다.
+        requestPassengerCard: ({ ticketNumber }) => client.publish(`/app/rooms/${roomCode}/passenger-card`, { ticketNumber })
     };
 }
