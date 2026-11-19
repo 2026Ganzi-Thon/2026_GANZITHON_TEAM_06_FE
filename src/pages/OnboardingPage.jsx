@@ -150,6 +150,9 @@ export default function OnboardingPage ()
                 // 열차 시각 계산용: 시작 시각, 열차 간격, 기기 시계와 서버 시계의 차이
                 startedAt: ticket.startedAt ?? existingTrip?.startedAt,
                 trainIntervalMs: ticket.trainIntervalMs ?? existingTrip?.trainIntervalMs,
+                firstTrainAt: ticket.firstTrainAt ?? existingTrip?.firstTrainAt,
+                nextTrainAt: ticket.nextTrainAt ?? existingTrip?.nextTrainAt,
+                trainCount: typeof ticket.trainCount === 'number' ? ticket.trainCount : existingTrip?.trainCount,
                 clockOffsetMs: ticket.serverTime
                     ? Date.parse(ticket.serverTime) - Date.now()
                     : existingTrip?.clockOffsetMs
