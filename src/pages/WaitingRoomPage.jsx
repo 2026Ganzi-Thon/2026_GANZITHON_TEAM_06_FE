@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import AppHeader from '../components/common/AppHeader';
 import ChatPanel from '../components/common/ChatPanel';
+import PassengerCard from '../components/waitingRoom/PassengerCard';
 import WaitingRoomActionBar from '../components/waitingRoom/WaitingRoomActionBar';
 import WaitingRoomBroadcastModal from '../components/waitingRoom/WaitingRoomBroadcastModal';
 import WaitingRoomMarquee from '../components/waitingRoom/WaitingRoomMarquee';
@@ -422,6 +423,7 @@ export default function WaitingRoomPage ()
                 <PhaserGame />
                 <WaitingRoomWoolLabel />
                 <WoolTokPanel />
+                <PassengerCard roomCode={trip?.roomCode} />
                 {trainChat && (
                     <div className="waiting-room-train-chat">
                         <ChatPanel
