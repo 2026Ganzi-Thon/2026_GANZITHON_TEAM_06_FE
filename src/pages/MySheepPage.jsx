@@ -9,6 +9,7 @@ import { clearOnboardingTrip, readPendingPieces } from '../game/onboardingSessio
 import { clearAuth, readAccessToken } from '../services/auth';
 import { fetchBlanketPieces } from '../services/blanketPieces';
 import { fetchMe, updatePublicSetting } from '../services/users';
+import { useBackgroundMusic, useMusicMuted } from '../utils/useBackgroundMusic';
 
 const TABS = [
     { key: 'blanket', label: '내 담요' },
@@ -20,12 +21,16 @@ const pieceDetailLink = (piece) => `/my-sheep/piece/${piece.id}${piece.temp ? '?
 
 export default function MySheepPage()
 {
+    useBackgroundMusic('/assets/sounds/finish.mp3', 0.3);
+    const [isMusicMuted, toggleMusicMuted] = useMusicMuted();
     // 탭을 주소(?tab=)에 두어, 조각 상세에서 뒤로 돌아와도 보던 탭이 유지됩니다.
     const [searchParams, setSearchParams] = useSearchParams();
     const tab = searchParams.get('tab') === 'storage' ? 'storage' : 'blanket';
-    const setTab = (key) => setSearchParams({ tab: key }, { replace: true });
+    const location = useLocation();
+    // 탭을 바꿔도 exitTo 같은 location.state가 사라지지 않게 함께 넘깁니다.
+    const setTab = (key) => setSearchParams({ tab: key }, { replace: true, state: location.state });
     const navigate = useNavigate();
-    const exitTo = useLocation().state?.exitTo;
+    const exitTo = location.state?.exitTo;
     const isBlanket = tab === 'blanket';
     const [token, setToken] = useState(readAccessToken);
     const [me, setMe] = useState(null);
@@ -84,7 +89,7 @@ export default function MySheepPage()
 
     const exitPath = isLoggedOut ? '/' : exitTo;
 
-    const goSave = () => navigate('/finish-waiting/save', { state: { from: 'my-sheep' } });
+    const goSave = () => navigate('/finish-waiting/save', { state: { from: 'my-sheep', exitTo } });
 
     // 로그인 전 안내 카드 (임시 보관 탭과 로그아웃 상태의 내 담요 탭에서 함께 씁니다)
     const promo = (
@@ -105,6 +110,15 @@ export default function MySheepPage()
     return (
         <main className="my-sheep-page">
             <AppHeader collapseOnDrag showMySheep={false} />
+            <button
+                type="button"
+                className={isMusicMuted ? 'my-sheep-music is-muted' : 'my-sheep-music'}
+                aria-label={isMusicMuted ? '배경음악 켜기' : '배경음악 끄기'}
+                aria-pressed={!isMusicMuted}
+                onClick={toggleMusicMuted}
+            >
+                <img src="/assets/backgrounds/onboarding/icon-announce.svg" alt="" />
+            </button>
             <PanelFrame
                 onExit={exitPath ? () => navigate(exitPath) : undefined}
                 actions={isBlanket && token && (

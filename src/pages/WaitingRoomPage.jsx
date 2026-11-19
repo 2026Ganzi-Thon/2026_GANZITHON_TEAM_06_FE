@@ -29,6 +29,7 @@ import {
     syncWaitingRoomTicket,
     WAITING_ROOM_TRAIN_CLOCK_SYNC
 } from '../services/waitingRoom';
+import { useBackgroundMusic } from '../utils/useBackgroundMusic';
 
 // 헤더가 숨고/다시 나타나는 스크롤 거리(px). 깜빡임을 막으려고 두 값을 다르게 둔다.
 const HEADER_HIDE_PAN = 20;
@@ -45,6 +46,7 @@ const SERVER_TO_REACTION = { NOD: 'nod', SEND: 'send' };
 export default function WaitingRoomPage ()
 {
     const navigate = useNavigate();
+    useBackgroundMusic('/assets/sounds/onboarding.mp3', 0.3);
     const trip = useMemo(() => readOnboardingTrip(), []);
     const [marqueeStats, setMarqueeStats] = useState({
         arrivalCount: null,

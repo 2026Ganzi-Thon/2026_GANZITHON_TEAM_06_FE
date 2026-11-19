@@ -13,6 +13,7 @@ import {
 import { requestWaitingRoomEntrance } from '../game/waitingRoomEntry';
 import { fetchRoomOccupancy, fetchRooms } from '../services/rooms';
 import { createTicket, updateTicketMoodChip } from '../services/tickets';
+import { useBackgroundMusic } from '../utils/useBackgroundMusic';
 
 const STEP_START = 'start';
 const STEP_GREETING = 'greeting';
@@ -68,6 +69,8 @@ export default function OnboardingPage ()
 
         return () => clearTimeout(timer);
     }, [isIssued, navigate]);
+
+    useBackgroundMusic('/assets/sounds/onboarding.mp3', 0.3);
 
     const selectedRoom = rooms.find((room) => room.roomCode === roomCode);
 

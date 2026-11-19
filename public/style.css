@@ -38,6 +38,20 @@ body {
     font-family: 'Pretendard Variable', Pretendard, -apple-system, 'Segoe UI', sans-serif;
 }
 
+/* PC에서 드래그로 글자가 선택되거나 이미지가 끌려가지 않게 한다 (입력창은 제외) */
+body {
+    user-select: none;
+}
+
+input,
+textarea {
+    user-select: text;
+}
+
+img {
+    -webkit-user-drag: none;
+}
+
 nav {
     display: flex;
     gap: var(--space-md);
@@ -715,6 +729,11 @@ section.onboarding-start {
         aspect-ratio: 258 / 86;
         padding: 0 4px;
         font-size: 12px;
+    }
+
+    /* 폭 600px 이하(모바일 세로)에서는 선택해도 흰 원·체크를 보여 주지 않는다 (칩 이미지가 chip-on으로 바뀌는 것으로 구분) */
+    .onboarding-chip .finish-waiting-check {
+        display: none;
     }
 }
 
