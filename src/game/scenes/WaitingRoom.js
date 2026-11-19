@@ -30,7 +30,6 @@ import { markWaitingRoomEntered, shouldPlayWaitingRoomEntrance } from '../waitin
 const ROOM_TEXTURE_WIDTH = 1442;
 const ROOM_TEXTURE_HEIGHT = 841;
 const LANDSCAPE_ZOOM = 1.25; // 가로 모바일에서 배경을 키우는 배율
-const PC_CHARACTER_BOOST = 1.3; // PC에서 양을 키우는 배율
 const MOBILE_CHARACTER_BOOST = 1.5; // 모바일(세로·가로)에서 양·역장을 추가로 키우는 배율
 const PC_CHARACTER_BOOST = 1.35; // PC에서 양·역장을 키우는 배율
 const MOBILE_MAX_HEIGHT = 520; // style.css의 가로 모바일 기준(520px)과 같은 값
