@@ -7,11 +7,13 @@ import ChoiceButton from '../components/common/ChoiceButton';
 import {
     MOOD_CHIPS,
     ROOM_DESCRIPTIONS,
+    readOnboardingTrip,
     saveOnboardingTrip
 } from '../game/onboardingSession';
 import { requestWaitingRoomEntrance } from '../game/waitingRoomEntry';
-import { fetchRooms } from '../services/rooms';
-import { createTicket } from '../services/tickets';
+import { fetchRoomOccupancy, fetchRooms } from '../services/rooms';
+import { createTicket, updateTicketMoodChip } from '../services/tickets';
+import { useBackgroundMusic } from '../utils/useBackgroundMusic';
 
 const STEP_START = 'start';
 const STEP_GREETING = 'greeting';
@@ -20,15 +22,20 @@ const STEP_STATUS = 'status';
 const STEP_TICKET = 'ticket';
 // 승차권이 발급되는 연출을 보여 준 뒤 대기실로 넘어가기까지의 시간(ms)
 const ISSUE_ANIMATION_MS = 2200;
+// 방 선택 화면에 있는 동안 방별 인원을 다시 불러오는 간격(ms). 서버가 밀어 주지 않아 직접 다시 조회한다.
+const OCCUPANCY_POLL_MS = 5000;
 
-function SpeakerIcon ()
+// 방 버튼에 붙일 인원 글자. 서 있는 승객이 있을 때만 입석 수를 덧붙인다.
+function formatOccupancy (occupancy)
 {
-    return (
-        <svg className="onboarding-speaker" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor" />
-            <path d="M16.5 9.5a4 4 0 010 5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-        </svg>
-    );
+    if (!occupancy)
+    {
+        return null;
+    }
+
+    const waiting = `${occupancy.count}명 대기`;
+
+    return occupancy.standingCount > 0 ? `${waiting} · 입석 ${occupancy.standingCount}명` : waiting;
 }
 
 export default function OnboardingPage ()
@@ -43,6 +50,8 @@ export default function OnboardingPage ()
     const [rooms, setRooms] = useState([]);
     const [roomsLoading, setRoomsLoading] = useState(false);
     const [roomsError, setRoomsError] = useState(null);
+    // 방 코드별 현재 인원. 불러오기 전이나 실패하면 비어 있어 인원 배지를 그리지 않는다.
+    const [occupancyByRoom, setOccupancyByRoom] = useState({});
     const [ticketLoading, setTicketLoading] = useState(false);
     const [ticketError, setTicketError] = useState(null);
     const [issuedTicketNumber, setIssuedTicketNumber] = useState(null);
@@ -60,6 +69,8 @@ export default function OnboardingPage ()
 
         return () => clearTimeout(timer);
     }, [isIssued, navigate]);
+
+    useBackgroundMusic('/assets/sounds/onboarding.mp3', 0.3);
 
     const selectedRoom = rooms.find((room) => room.roomCode === roomCode);
 
@@ -90,6 +101,43 @@ export default function OnboardingPage ()
             loadRooms();
         }
     }, [step, rooms.length, roomsLoading, roomsError]);
+
+    // 방 선택 단계에 있는 동안만 방별 인원을 주기적으로 불러온다. 실패하면 마지막으로 받은 인원을 그대로 둔다.
+    useEffect(() =>
+    {
+        if (step !== STEP_ROOM)
+        {
+            return undefined;
+        }
+
+        let cancelled = false;
+
+        const loadOccupancy = async () =>
+        {
+            try
+            {
+                const list = await fetchRoomOccupancy();
+
+                if (!cancelled)
+                {
+                    setOccupancyByRoom(Object.fromEntries(list.map((item) => [item.roomCode, item])));
+                }
+            }
+            catch
+            {
+                // 인원은 보조 정보라 실패해도 방 선택은 그대로 할 수 있게 둔다.
+            }
+        };
+
+        loadOccupancy();
+        const intervalId = setInterval(loadOccupancy, OCCUPANCY_POLL_MS);
+
+        return () =>
+        {
+            cancelled = true;
+            clearInterval(intervalId);
+        };
+    }, [step]);
 
     // 승차권 화면에 들어오면 바로 벨 소리를 낸다. 자동재생 차단 등으로 실패해도 무시한다.
     useEffect(() =>
@@ -126,25 +174,51 @@ export default function OnboardingPage ()
 
         try
         {
-            const ticket = await createTicket({
+            const existingTrip = readOnboardingTrip();
+            const sameRoomTicket = existingTrip?.ticketId && existingTrip.roomCode === roomCode;
+            let ticket = null;
+
+            if (sameRoomTicket)
+            {
+                try
+                {
+                    ticket = await updateTicketMoodChip(existingTrip.ticketId, moodChip ?? null);
+                }
+                catch (error)
+                {
+                    // 보관 중인 승차권을 수정할 권한이 없거나(로그인 필요 등) 이미 끝난 기다림이면 새로 발급합니다.
+                    if (error.code !== 'AUTH_LOGIN_REQUIRED' && error.code !== 'TICKET_ALREADY_ENDED')
+                    {
+                        throw error;
+                    }
+                }
+            }
+
+            ticket ??= await createTicket({
                 roomCode,
                 moodChip: moodChip ?? null
             });
 
-            setIssuedTicketNumber(ticket.ticketNumber);
+            setIssuedTicketNumber(ticket.ticketNumber ?? existingTrip?.ticketNumber);
             saveOnboardingTrip({
+                ...existingTrip,
                 roomCode,
                 roomName: selectedRoom?.name,
                 moodChip: ticket.moodChip,
-                ticketId: ticket.ticketId,
-                ticketNumber: ticket.ticketNumber,
+                ticketId: ticket.ticketId ?? existingTrip?.ticketId,
+                ticketNumber: ticket.ticketNumber ?? existingTrip?.ticketNumber,
                 displayName: ticket.displayName,
-                patternCode: ticket.patternCode,
-                guestToken: ticket.guestToken,
+                patternCode: ticket.patternCode ?? existingTrip?.patternCode,
+                guestToken: ticket.guestToken ?? existingTrip?.guestToken,
                 // 열차 시각 계산용: 시작 시각, 열차 간격, 기기 시계와 서버 시계의 차이
-                startedAt: ticket.startedAt,
-                trainIntervalMs: ticket.trainIntervalMs,
-                clockOffsetMs: Date.parse(ticket.serverTime) - Date.now()
+                startedAt: ticket.startedAt ?? existingTrip?.startedAt,
+                trainIntervalMs: ticket.trainIntervalMs ?? existingTrip?.trainIntervalMs,
+                firstTrainAt: ticket.firstTrainAt ?? existingTrip?.firstTrainAt,
+                nextTrainAt: ticket.nextTrainAt ?? existingTrip?.nextTrainAt,
+                trainCount: typeof ticket.trainCount === 'number' ? ticket.trainCount : existingTrip?.trainCount,
+                clockOffsetMs: ticket.serverTime
+                    ? Date.parse(ticket.serverTime) - Date.now()
+                    : existingTrip?.clockOffsetMs
             });
             requestWaitingRoomEntrance();
             setIsIssued(true);
@@ -209,7 +283,7 @@ export default function OnboardingPage ()
             {step === STEP_GREETING && (
                 <>
                     <p className="onboarding-broadcast">
-                        <SpeakerIcon />
+                        <img className="onboarding-speaker" src="/assets/backgrounds/onboarding/icon-announce.svg" alt="" />
                         잠시 정차합니다. 서두르지 않아도 괜찮습니다.
                     </p>
                 </>
@@ -231,6 +305,7 @@ export default function OnboardingPage ()
                                         index={index + 1}
                                         title={room.name}
                                         subtitle={ROOM_DESCRIPTIONS[room.roomCode] ?? ''}
+                                        badge={formatOccupancy(occupancyByRoom[room.roomCode])}
                                         selected={room.roomCode === roomCode}
                                         onClick={() => setRoomCode(room.roomCode)}
                                     />
@@ -274,6 +349,7 @@ export default function OnboardingPage ()
                         nextDisabled={chatContent.nextDisabled}
                         onNext={chatContent.onNext}
                         closing={step === STEP_TICKET}
+                        typing
                     >
                         {chatContent.extra}
                     </ChatPanel>
@@ -290,7 +366,10 @@ export default function OnboardingPage ()
                         <img src="/assets/ui/ticket.png" alt="승차권. 출발역 잠시역 3번홈, 도착예정 알 수 없음" />
                         <p className="ticket-destination">{selectedRoom.name}</p>
                         <p className="ticket-number">
-                            NO. {issuedTicketNumber ?? '—'}
+                            <span className="ticket-number-label">NO</span>
+                            {issuedTicketNumber != null && (
+                                <span className="ticket-number-value">. {issuedTicketNumber}</span>
+                            )}
                         </p>
                     </article>
                     <div className="ticket-step-bottom">
@@ -301,7 +380,7 @@ export default function OnboardingPage ()
                             disabled={ticketLoading || isIssued}
                             onClick={handleReceiveTicket}
                         >
-                            <img className="ticket-pill-icon" src="/assets/backgrounds/onboarding/ticket_icon.png" alt="" />
+                            <img className="ticket-pill-icon" src="/assets/backgrounds/onboarding/icon-ticket.svg" alt="" />
                             {ticketLoading ? '발급 중…' : isIssued ? '발급 완료' : '승차권 받기'}
                         </button>
                     </div>

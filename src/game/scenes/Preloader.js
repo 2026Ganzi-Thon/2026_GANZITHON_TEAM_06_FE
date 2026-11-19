@@ -1,18 +1,6 @@
 import { Scene } from 'phaser';
 
-const SIT_DIRECTIONS = [
-    'east',
-    'north',
-    'north-east',
-    'north-west',
-    'south',
-    'south-east',
-    'south-west',
-    'west'
-];
-
-const WALK_DIRECTIONS = ['south-east', 'south-west'];
-const WALK_FRAME_COUNT = 6;
+const WALK_FRAME_COUNT = 3;
 
 export class Preloader extends Scene
 {
@@ -31,7 +19,8 @@ export class Preloader extends Scene
         this.load.setPath('assets');
         this.load.image('waiting-room', 'backgrounds/waiting-room/room.png');
         this.load.image('clock', 'backgrounds/waiting-room/clock.png');
-        this.load.image('waiting-room-bench', 'items/waiting-room/bench-isometric.png');
+        this.load.image('bench-vine', 'items/waiting-room/bench-vine.png');
+        this.load.image('bench-plain', 'items/waiting-room/bench-plain.png');
         this.load.svg('train', 'ui/waiting-room/train.svg', { width: 1238, height: 579 });
         for (let frame = 0; frame < 12; frame += 1)
         {
@@ -40,28 +29,32 @@ export class Preloader extends Scene
         }
 
         this.load.audio('train-sound', 'sounds/train.mp3');
+        this.load.audio('reaction-nod-sound', 'sounds/good.mp3');
+        this.load.audio('reaction-send-sound', 'sounds/heart.mp3');
         this.load.svg('wool01', 'ui/waiting-room/wool01.svg', { scale: 3 });
         this.load.svg('wool02', 'ui/waiting-room/wool02.svg', { scale: 3 });
         this.load.svg('wool03', 'ui/waiting-room/wool03.svg', { scale: 3 });
         this.load.svg('window', 'ui/waiting-room/window.svg', { width: 1450, height: 725 });
+        this.load.image('me-chip', 'ui/waiting-room/me-chip.png');
+        this.load.image('reaction-nod', 'ui/waiting-room/reaction-nod.png');
+        this.load.image('reaction-heart', 'ui/waiting-room/reaction-heart.png');
 
-        SIT_DIRECTIONS.forEach((direction) =>
+        this.load.image('passenger', 'characters/passenger/sit/passenger.png');
+        // 리액션을 받는 동안 보여 줄 눈 감은 앉은 양 (왼쪽/오른쪽을 바라봄)
+        this.load.image('passenger-closed-left', 'characters/passenger/walk/passenger-closed-left.png');
+        this.load.image('passenger-closed-right', 'characters/passenger/walk/passenger-closed-right.png');
+        // portrait.svg는 80x116 크기라 8배로 래스터화한다.
+        this.load.svg('station-master', 'characters/station-master/portrait.svg', { scale: 8 });
+
+        for (let frame = 0; frame < WALK_FRAME_COUNT; frame += 1)
         {
-            this.load.image(`sit-${direction}`, `characters/passenger/sit/${direction}.png`);
-        });
+            const fileIndex = String(frame).padStart(3, '0');
 
-        WALK_DIRECTIONS.forEach((direction) =>
-        {
-            for (let frame = 0; frame < WALK_FRAME_COUNT; frame += 1)
-            {
-                const fileIndex = String(frame).padStart(3, '0');
+            this.load.image(`walk-south-west-${frame}`, `characters/passenger/walk/frame_${fileIndex}.png`);
+        }
 
-                this.load.image(
-                    `walk-${direction}-${frame}`,
-                    `characters/passenger/walk/${direction}/frame_${fileIndex}.png`
-                );
-            }
-        });
+        // 앉기 직전 한 프레임은 새 걷기 첫 장을 그대로 쓴다.
+        this.load.image('walk-south-east-0', 'characters/passenger/walk/frame_000.png');
     }
 
     create ()

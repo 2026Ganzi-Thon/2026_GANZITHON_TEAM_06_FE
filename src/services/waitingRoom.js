@@ -35,7 +35,10 @@ function mergeTripWithTicketClock (trip, ticket)
     const merged = {
         ...trip,
         startedAt: ticket.startedAt ?? trip.startedAt,
-        trainIntervalMs: ticket.trainIntervalMs ?? trip.trainIntervalMs
+        trainIntervalMs: ticket.trainIntervalMs ?? trip.trainIntervalMs,
+        firstTrainAt: ticket.firstTrainAt ?? trip.firstTrainAt,
+        nextTrainAt: ticket.nextTrainAt ?? trip.nextTrainAt,
+        trainCount: typeof ticket.trainCount === 'number' ? ticket.trainCount : trip.trainCount
     };
 
     if (ticket.serverTime)

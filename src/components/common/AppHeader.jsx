@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 // shortcut: 발표 전에 공공 상담 번호가 최신인지 확인, SF-01
 const SAFETY_LINES = [
@@ -132,6 +132,7 @@ function useCollapseOnDrag (enabled, headerRef)
 export default function AppHeader ({ showMySheep = true, collapseOnDrag = false })
 {
     const navigate = useNavigate();
+    const { pathname } = useLocation();
     const headerRef = useRef(null);
     const [isSafetyOpen, setIsSafetyOpen] = useState(false);
     const isCollapsed = useCollapseOnDrag(collapseOnDrag, headerRef);
@@ -144,7 +145,7 @@ export default function AppHeader ({ showMySheep = true, collapseOnDrag = false 
             </p>
             <div className="app-header-actions">
                 {showMySheep && (
-                    <button type="button" aria-label="마이 양" onClick={() => navigate('/my-sheep')}>
+                    <button type="button" aria-label="마이 양" onClick={() => navigate('/my-sheep', { state: { exitTo: pathname === '/waiting-room' ? pathname : undefined } })}>
                         <img src="/assets/ui/btn-my-sheep.png" alt="" />
                     </button>
                 )}

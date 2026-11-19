@@ -217,50 +217,86 @@
     position: absolute;
     top: 42%;
     left: 50%;
-    width: min(72%, 320px);
+    width: min(80%, 320px);
     transform: translate(-50%, -50%);
     pointer-events: none;
 }
 
+.waiting-room-reaction.is-anchored {
+    top: auto;
+    /* 89.5%는 에셋에서 말풍선 꼬리 끝이 있는 높이입니다. */
+    transform: translate(-50%, -89.5%);
+}
+
 .waiting-room-reaction-bubble {
-    padding: var(--space-md);
-    border: 3px solid #f3d5bc;
-    border-radius: 16px;
-    background: rgb(255 252 247 / 96%);
-    box-shadow: 0 8px 24px rgb(62 42 34 / 18%);
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1400 / 560;
+    border: 0;
+    background: url('/assets/ui/waiting-room/reaction-bubble.png') center / 100% 100% no-repeat;
     pointer-events: auto;
 }
 
+.waiting-room-reaction-bubble-content {
+    position: absolute;
+    left: 9%;
+    right: 9%;
+    top: 16%;
+    bottom: 28%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+}
+
 .waiting-room-reaction-bubble p {
-    margin: 0 0 var(--space-sm);
-    font-size: 0.9rem;
-    font-weight: 600;
-    line-height: 1.45;
-    color: var(--color-ink);
-    text-align: center;
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--color-brown-stroke);
+    text-align: left;
+    padding-left: 12px;
 }
 
 .waiting-room-reaction-buttons {
     display: flex;
-    gap: var(--space-sm);
-    justify-content: center;
+    align-items: center;
+    gap: 8px;
+}
+
+.waiting-room-reaction-divider {
+    width: 1px;
+    align-self: stretch;
+    background: #e4cbb6;
 }
 
 .waiting-room-reaction-btn {
-    min-width: 5.5rem;
-    padding: 0.5rem 0.85rem;
-    border: 2px solid #e0c4ad;
-    border-radius: 999px;
-    background: #fff;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--color-ink);
+    flex: 1;
+    min-width: 0;
+    aspect-ratio: 108 / 28;
+    /* 왼쪽 아이콘과 겹치지 않게 글자를 오른쪽으로 민다. 더 옮기려면 이 값을 키운다 */
+    padding: 0 0 0 8%;
+    text-align: center;
+    border: 0;
+    background: center / 100% 100% no-repeat;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-brown-stroke);
     cursor: pointer;
 }
 
+.waiting-room-reaction-btn-nod {
+    background-image: url('/assets/ui/waiting-room/good-btn.png');
+}
+
+.waiting-room-reaction-btn-send {
+    background-image: url('/assets/ui/waiting-room/heart-btn.png');
+}
+
 .waiting-room-reaction-btn.is-active {
-    border-color: #e891a8;
-    background: #ffe8ef;
+    /* 버튼이 이미지라서 테두리 대신 살짝 어둡게 눌린 표시를 한다 */
+    filter: brightness(0.9);
 }
 
 .waiting-room-reaction-btn:disabled:not(.is-active) {
@@ -268,11 +304,31 @@
     cursor: default;
 }
 
+/* 시작과 끝에서 잠깐 멈추고, 그 사이에 넘치는 길이만큼 왼쪽으로 흘러간다 (방송 노출 15초와 맞춘다) */
+@keyframes waiting-room-marquee-scroll {
+    0%, 15% { transform: translateX(0); }
+    85%, 100% { transform: translateX(calc(var(--marquee-shift) * -1)); }
+}
+
 /* 17px는 PC 크기: styles.css의 모바일 글자 크기(9~10px)를 덮어쓰지 않게 큰 화면에서만 적용한다 */
 @media (min-width: 901px) and (min-height: 521px) {
     .waiting-room .waiting-room-marquee-message,
     .waiting-room .waiting-room-marquee-message-broadcast {
         font-size: 17px;
+    }
+
+    /* 방송 문구는 PC에서 줄바꿈 없이 한 줄로 두고, 전광판 폭보다 길면 끝까지 흘러가며 보여 준다 */
+    .waiting-room .waiting-room-marquee-message-broadcast {
+        overflow: hidden;
+        white-space: nowrap;
+    }
+
+    .waiting-room .waiting-room-marquee-scroll {
+        display: inline-block;
+    }
+
+    .waiting-room .waiting-room-marquee-scroll.is-scrolling {
+        animation: waiting-room-marquee-scroll 15s linear forwards;
     }
 }
 
@@ -492,6 +548,26 @@
 
 @keyframes broadcast-check-pop {
     from { transform: scale(0); }
+}
+
+/* 모바일: 역장 리액션 말풍선과 글자를 PC보다 작게 한다 (모바일 기준은 위 화면 CSS와 같다) */
+@media (max-width: 900px), (max-height: 520px) {
+    .waiting-room-reaction {
+        width: min(60%, 230px);
+    }
+
+    .waiting-room-reaction-bubble-content {
+        gap: 4px;
+    }
+
+    .waiting-room-reaction-bubble p {
+        padding-left: 8px;
+        font-size: 11px;
+    }
+
+    .waiting-room-reaction-btn {
+        font-size: 11px;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {

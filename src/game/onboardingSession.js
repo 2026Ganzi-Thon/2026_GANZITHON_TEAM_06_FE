@@ -54,6 +54,11 @@ export function readOnboardingTrip ()
     }
 }
 
+export function clearOnboardingTrip ()
+{
+    sessionStorage.removeItem(TRIP_KEY);
+}
+
 export function readGuestToken ()
 {
     return sessionStorage.getItem(GUEST_TOKEN_KEY);
@@ -112,8 +117,21 @@ export function countPassedTrains (trip)
 }
 
 // 다음 열차가 지나가기까지 남은 시간(ms). 승차권이 없으면 null.
+// nextTrainAt이 있으면 그 시각까지(첫 열차 포함). 없으면 시작 시각과 간격으로 계산한다.
 export function msUntilNextTrain (trip)
 {
+    if (trip?.nextTrainAt)
+    {
+        const nextAt = Date.parse(trip.nextTrainAt);
+
+        if (!Number.isNaN(nextAt))
+        {
+            const serverNow = Date.now() + (trip.clockOffsetMs || 0);
+
+            return Math.max(0, nextAt - serverNow);
+        }
+    }
+
     const clock = readTrainClock(trip);
 
     return clock ? clock.interval - (Math.max(0, clock.elapsed) % clock.interval) : null;

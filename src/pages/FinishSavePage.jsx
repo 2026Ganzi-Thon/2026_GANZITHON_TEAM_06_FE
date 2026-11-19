@@ -1,18 +1,22 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import { readPendingPieces } from '../game/onboardingSession';
 import { readAccessToken } from '../services/auth';
 import { claimPendingTickets } from '../services/tickets';
 import { login, signup } from '../services/users';
+import { useBackgroundMusic } from '../utils/useBackgroundMusic';
 
 const NICKNAME_MAX = 12;
+const TOAST_MS = 1800;
 const NICKNAME_PATTERN = /^[가-힣a-zA-Z0-9]{1,12}$/;
 
 // 배경은 기다림 마치기 화면과 같아서 finish-waiting-page 클래스를 함께 씁니다.
 export default function FinishSavePage()
 {
+    useBackgroundMusic('/assets/sounds/finish.mp3', 0.3);
     const navigate = useNavigate();
+    const location = useLocation();
     const [isLogin, setIsLogin] = useState(false);
     const [isEnd, setIsEnd] = useState(false);
     // 완료 화면 제목 (null이면 완료 화면을 보여주지 않음)
@@ -96,16 +100,20 @@ export default function FinishSavePage()
         }
     };
 
-    // 팝업의 확인을 누르면 완료 화면으로 넘어갑니다.
-    const handleConfirmPopup = () => {
-        setPopup('');
-        setDoneTitle('담요에 이어 붙였어요.');
-    };
+    // 팝업은 잠시 보여준 뒤 저절로 사라지고 완료 화면으로 넘어갑니다.
+    useEffect(() => {
+        if (!popup) return undefined;
+        const timer = setTimeout(() => {
+            setPopup('');
+            setDoneTitle('담요에 이어 붙였어요.');
+        }, TOAST_MS);
+        return () => clearTimeout(timer);
+    }, [popup]);
 
     if (isEnd) {
         return (
             <main className="finish-waiting-page">
-                <section className="finish-save-panel finish-save-panel-end">
+                <section key="end" className="finish-save-panel finish-save-panel-end">
                     <h1 className="finish-save-title">
                         여기까지예요.<br />창을 닫아도 괜찮아요.
                     </h1>
@@ -125,14 +133,14 @@ export default function FinishSavePage()
     if (doneTitle) {
         return (
             <main className="finish-waiting-page">
-                <section className="finish-save-panel finish-save-panel-done">
+                <section key="done" className="finish-save-panel finish-save-panel-done">
                     <div className="finish-save-scroll">
                         <h1 className="finish-save-title">{doneTitle}</h1>
                         <img className="finish-save-gift" src="/assets/storage/gift.png" alt="선물 상자" />
                         <button
                             type="button"
                             className="finish-save-btn finish-save-btn-later"
-                            onClick={() => navigate('/my-sheep')}
+                            onClick={() => navigate('/my-sheep', { replace: true, state: { exitTo: location.state?.exitTo ?? '/finish-waiting/save' } })}
                         >
                             내 담요 보기
                         </button>
@@ -163,16 +171,9 @@ export default function FinishSavePage()
         return (
             <main className="finish-waiting-page">
                 {popup && (
-                    <div className="finish-save-popup-backdrop">
-                        <div className="finish-save-popup" role="dialog" aria-modal="true" aria-label={popup}>
-                            <p className="finish-save-popup-text">{popup}</p>
-                            <button type="button" className="finish-save-btn finish-save-btn-primary finish-save-popup-btn" onClick={handleConfirmPopup}>
-                                확인
-                            </button>
-                        </div>
-                    </div>
+                    <div className="finish-save-toast" role="status">{popup}</div>
                 )}
-                <section className="finish-save-panel finish-save-panel-login">
+                <section key="login" className="finish-save-panel finish-save-panel-login">
                     <div className="finish-save-scroll">
                         <div className="finish-save-tabs">
                             <button
@@ -260,7 +261,7 @@ export default function FinishSavePage()
 
     return (
         <main className="finish-waiting-page">
-            <section className="finish-save-panel">
+            <section key="ask" className="finish-save-panel">
                 <h1 className="finish-save-title">담요 조각을 계정에 저장할까요?</h1>
                 <p className="finish-save-desc">저장하고 완성된 나의 담요를 확인하세요.</p>
                 <img className="finish-save-gift" src="/assets/storage/gift.png" alt="선물 상자" />
@@ -276,7 +277,7 @@ export default function FinishSavePage()
                 <button
                     type="button"
                     className="finish-save-btn finish-save-btn-later"
-                    onClick={() => setDoneTitle("임시 보관함에 두었어요.")}
+                    onClick={() => (location.state?.from === 'my-sheep' ? navigate(-1) : setDoneTitle("임시 보관함에 두었어요."))}
                 >
                     나중에 할게요.
                 </button>

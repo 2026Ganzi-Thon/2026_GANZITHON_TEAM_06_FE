@@ -3,7 +3,6 @@ import { Scene } from 'phaser';
 import { REACTION_FEEDBACK_MS } from '../../data/waitingRoomBroadcast';
 import { WAITING_ROOM_TRAIN_CLOCK_SYNC } from '../../services/waitingRoom.js';
 import { EventBus } from '../EventBus';
-import { WAITING_ROOM_DEMO_OCCUPANTS } from '../objects/waitingRoomDemoOccupants';
 import {
     getBenchSeatTexture,
     getBenchSeatWorldYNudge,
@@ -12,14 +11,17 @@ import {
     getWoolTextureForBench,
     PLAYER_BENCH_ANCHOR,
     PLAYER_BENCH_SEAT_INDEX,
+    PLAYER_BENCH_SLOT_INDEX,
+    SHEEP_SEATS_PER_BENCH,
     PLAYER_SEATED_DIRECTION,
     WAITING_ROOM_BENCH_SLOTS,
     WAITING_ROOM_BENCH_WIDTH_TEXTURE
 } from '../objects/waitingRoomBenches';
 import { countPassedTrains, msUntilNextTrain, readOnboardingTrip } from '../onboardingSession';
 import {
-    getReactionEmoji,
+    getReactionTexture,
     WAITING_ROOM_BIND_LOCAL_PLAYER,
+    WAITING_ROOM_PASSENGERS,
     WAITING_ROOM_REACTION_EVENT,
     WAITING_ROOM_REACTION_REMOTE
 } from '../waitingRoomReactionEvents';
@@ -27,11 +29,39 @@ import { markWaitingRoomEntered, shouldPlayWaitingRoomEntrance } from '../waitin
 
 const ROOM_TEXTURE_WIDTH = 1442;
 const ROOM_TEXTURE_HEIGHT = 841;
+const LANDSCAPE_ZOOM = 1.25; // 가로 모바일에서 배경을 키우는 배율
+const MOBILE_CHARACTER_BOOST = 1.5; // 모바일(세로·가로)에서 양·역장을 추가로 키우는 배율
+const PC_CHARACTER_BOOST = 1.35; // PC에서 양·역장을 키우는 배율
 const MOBILE_MAX_HEIGHT = 520; // style.css의 가로 모바일 기준(520px)과 같은 값
 const WALK_MS = 1200;
 const SIT_MS = 1800;
 const TURN_MS = 450;
 const PLAYER_SEAT_WORLD_Y_NUDGE = 13;
+// 예전 앉기·걷기 스프라이트(48px)와 같은 화면 크기로 맞춘다.
+const PASSENGER_DISPLAY_PX = 100;
+// 걷는 양은 이미지 안에서 몸이 더 크게 차지해서, 앉은 양과 몸 크기가 같아 보이도록 줄이는 비율.
+const WALK_SCALE_RATIO = 0.83;
+// 화면 위. 벤치 좌표는 그대로 두고 양만 올린다.
+const SHEEP_LIFT_Y = 80;
+const MOBILE_SHEEP_EXTRA_LIFT = 15; // 모바일(세로·가로)에서 양을 올리는 높이
+const PC_SHEEP_EXTRA_LIFT = 20; // PC에서 양을 살짝 더 올리는 높이(배경 텍스처 px)
+// 대기실 복도 가운데. 발 위치(배경 텍스처).
+const STATION_MASTER_TEXTURE = { x: 721, y: 420 };
+const STATION_MASTER_DISPLAY_PX = 90; // PC 기준 크기
+const STATION_MASTER_MOBILE_DISPLAY_PX = 99; // 모바일 크기(66px × 1.5)
+// 양·의자보다 앞에 두는 머리 위 표시 깊이.
+const HEAD_MARKER_DEPTH = 20000;
+// 시안 기준 머리 위 칩·리액션 너비(화면 px, roomScale을 곱한다).
+const ME_CHIP_WIDTH = 34;
+const REACTION_ICON_WIDTH = 40;
+// 모바일은 화면이 작아 양 머리 위 리액션 아이콘을 더 키운다.
+const MOBILE_REACTION_ICON_BOOST = 1.4;
+// 리액션 아이콘이 양 머리 위에 뜨는 높이(양 키 대비). 작을수록 아래로 내려온다.
+const REACTION_ICON_HEAD_RATIO = 0.8;
+// 모바일은 아이콘이 더 커서(MOBILE_REACTION_ICON_BOOST) 머리를 가리지 않게 더 위로 띄운다.
+const MOBILE_REACTION_ICON_HEAD_RATIO = 0.80;
+// 양을 누르고 뗄 때까지 이보다 많이 움직이면(배경 드래그) 승객 카드를 열지 않는다(화면 px).
+const PASSENGER_TAP_MAX_MOVE_PX = 8;
 
 // 창문 밖 열차 (배경 텍스처 기준 중심 좌표·너비). 위치는 여기서 조정한다.
 const TRAIN_TEXTURE = { y: 225, width: 330 };
@@ -102,6 +132,7 @@ export class WaitingRoom extends Scene
         this.wool = this.add.image(0, 0, 'wool01').setOrigin(0.5, 1).setVisible(false);
         // 털실이 나타날 때의 등장 진행도(0~1). 1이면 평소 모습이다.
         this.woolIntro = 1;
+        this.meChipIntro = 1;
         // 털실이 한 올 쌓이기 전(wool01)에는 누를 수 없고, 쌓이면 wool02로 바뀌어 누르면 털실 톡톡이 열린다.
         this.wool.on('pointerdown', () =>
         {
@@ -123,6 +154,8 @@ export class WaitingRoom extends Scene
         this.localTicketId = null;
         this.occupantsByTicketId = new Map();
         this.reactionEmojisByTicketId = new Map();
+        this.meChip = this.add.image(0, 0, 'me-chip').setOrigin(0.5, 1).setDepth(HEAD_MARKER_DEPTH).setVisible(false);
+        this.stationMaster = this.add.image(0, 0, 'station-master').setOrigin(0.5, 1);
         this._panX = null;
         this._panY = null;
         this._canPanX = false;
@@ -150,18 +183,38 @@ export class WaitingRoom extends Scene
         this.createWalkAnimations();
         this.createBenches();
         this.spawnPlayer();
-        this.spawnDemoOccupants();
         this.handleBenchLayoutRefresh = () => this.refreshBenchLayoutFromModule();
 
         EventBus.on('refresh-waiting-room-bench-layout', this.handleBenchLayoutRefresh);
         this.handleWaitingRoomReaction = (payload) =>
         {
+            // 입석이면 이모지 없이 서버 숫자에만 반영된다.
+            if (this.isLocalStanding)
+            {
+                return;
+            }
+
             this.showReactionForOccupant(payload?.ticketId, payload?.reactionType);
         };
         this.handleBindLocalPlayer = (payload) => this.bindLocalPlayerTicket(payload?.ticketId);
         EventBus.on(WAITING_ROOM_REACTION_EVENT, this.handleWaitingRoomReaction);
-        EventBus.on(WAITING_ROOM_REACTION_REMOTE, this.handleWaitingRoomReaction);
+        // 다른 승객의 리액션. 입석 승객은 양이 없어서 이모지는 없지만 효과음은 낸다.
+        // (없는 번호를 그대로 넘기면 내 양에 이모지가 뜨므로 앉은 승객만 이모지를 띄운다)
+        this.handleRemoteReaction = (payload) =>
+        {
+            if (this.occupantsByTicketId.has(payload?.ticketId))
+            {
+                this.showReactionForOccupant(payload.ticketId, payload.reactionType);
+            }
+            else if (payload?.reactionType)
+            {
+                this.playReactionSound(payload.reactionType);
+            }
+        };
+        EventBus.on(WAITING_ROOM_REACTION_REMOTE, this.handleRemoteReaction);
         EventBus.on(WAITING_ROOM_BIND_LOCAL_PLAYER, this.handleBindLocalPlayer);
+        this.handlePassengers = (payload) => this.applyPassengers(payload);
+        EventBus.on(WAITING_ROOM_PASSENGERS, this.handlePassengers);
 
         // 도안을 전달하면 털실이 wool03으로 바뀐다. wool03을 누르면 새 도안으로 털실 톡톡이 다시 열린다.
         this.handleWoolDeliver = () =>
@@ -182,14 +235,19 @@ export class WaitingRoom extends Scene
         };
         EventBus.on('wool-reset', this.handleWoolReset);
 
-        // 씬이 꺼질 때 EventBus 구독을 풀어 준다. (연결하지 않으면 씬이 다시 만들어진 뒤에도 옛 씬이 이벤트를 받아 'sys' 오류가 난다)
+        // 씬이 꺼지거나 게임째 파괴될 때 EventBus 구독을 풀어 준다.
+        // (게임 destroy는 shutdown 없이 destroy만 보내서, 둘 다 걸지 않으면 다음 입장 때 옛 씬이 이벤트를 받아 터진다)
         this.events.once('shutdown', this.shutdown, this);
+        this.events.once('destroy', this.shutdown, this);
 
         EventBus.emit('current-scene-ready', this);
     }
 
     shutdown ()
     {
+        this.events.off('shutdown', this.shutdown, this);
+        this.events.off('destroy', this.shutdown, this);
+
         if (this.handleBenchLayoutRefresh)
         {
             EventBus.off('refresh-waiting-room-bench-layout', this.handleBenchLayoutRefresh);
@@ -198,7 +256,7 @@ export class WaitingRoom extends Scene
         if (this.handleWaitingRoomReaction)
         {
             EventBus.off(WAITING_ROOM_REACTION_EVENT, this.handleWaitingRoomReaction);
-            EventBus.off(WAITING_ROOM_REACTION_REMOTE, this.handleWaitingRoomReaction);
+            EventBus.off(WAITING_ROOM_REACTION_REMOTE, this.handleRemoteReaction);
         }
 
         if (this.handleBindLocalPlayer)
@@ -206,8 +264,15 @@ export class WaitingRoom extends Scene
             EventBus.off(WAITING_ROOM_BIND_LOCAL_PLAYER, this.handleBindLocalPlayer);
         }
 
+        if (this.handlePassengers)
+        {
+            EventBus.off(WAITING_ROOM_PASSENGERS, this.handlePassengers);
+        }
+
         this.trainSound?.stop();
         this.clearAllReactionEmojis();
+        this.meChip?.destroy();
+        this.stationMaster?.destroy();
         this.occupantsByTicketId.clear();
 
         if (this.handleTrainClockSync)
@@ -270,6 +335,7 @@ export class WaitingRoom extends Scene
 
             const seat = this.getPlayerSeatWorld(mod.getPlayerSeatTexture);
 
+            this.scalePassenger(this.player);
             this.player.setPosition(seat.x, seat.y);
             this.syncPlayerDepth();
             this.layoutDemoOccupants();
@@ -284,7 +350,10 @@ export class WaitingRoom extends Scene
             return;
         }
 
-        const hasYarn = (countPassedTrains(readOnboardingTrip()) ?? 0) >= 1;
+        const trip = readOnboardingTrip();
+        const hasYarn = typeof trip?.trainCount === 'number'
+            ? trip.trainCount >= 1
+            : (countPassedTrains(trip) ?? 0) >= 1;
         const key = hasYarn ? 'wool02' : 'wool01';
 
         if (this.wool.texture.key === key)
@@ -351,7 +420,6 @@ export class WaitingRoom extends Scene
         this.trainTimer = this.time.delayedCall(delay, () =>
         {
             this.playTrainPass();
-            this.scheduleTrain();
         });
     }
 
@@ -413,8 +481,17 @@ export class WaitingRoom extends Scene
         const fitHeight = viewHeight / ROOM_TEXTURE_HEIGHT;
         // 모바일(세로 화면, 또는 높이가 낮은 가로 화면)은 꽉 채우고, 그 외에는 배경 전체가 보이게 한다.
         const isPortrait = viewHeight > viewWidth || viewHeight <= MOBILE_MAX_HEIGHT;
+        const isShortLandscape = viewWidth > viewHeight && viewHeight <= MOBILE_MAX_HEIGHT;
 
         this.roomScale = isPortrait ? Math.max(fitWidth, fitHeight) : Math.min(fitWidth, fitHeight);
+
+        // 가로 모바일은 배경을 키우고(가장자리는 드래그로 확인), 양·역장은 더 키운다.
+        if (isShortLandscape)
+        {
+            this.roomScale *= LANDSCAPE_ZOOM;
+        }
+
+        this.characterBoost = isPortrait ? MOBILE_CHARACTER_BOOST : PC_CHARACTER_BOOST;
 
         const roomWidth = ROOM_TEXTURE_WIDTH * this.roomScale;
         const roomHeight = ROOM_TEXTURE_HEIGHT * this.roomScale;
@@ -432,7 +509,7 @@ export class WaitingRoom extends Scene
             const minOffsetY = viewHeight - roomHeight;
 
             // 세로는 배경 맨 위에서 시작한다. 안내판은 배경 위쪽에 붙어 있어서 아래로 내리면 같이 올라간다.
-            this.roomOffsetY = Math.min(0, Math.max(minOffsetY, this._panY ?? 0));
+            this.roomOffsetY = Math.min(0, Math.max(minOffsetY, this._panY ?? (isShortLandscape ? viewHeight / 2 - seat.y * this.roomScale : 0)));
         }
 
         this.isMobileLayout = isPortrait;
@@ -477,17 +554,21 @@ export class WaitingRoom extends Scene
         this.trainMaskShape.fillRect(areaTopLeft.x, areaTopLeft.y, (x2 - x1) * this.roomScale, (y2 - y1) * this.roomScale);
 
         this.layoutBenches();
+        this.layoutStationMaster();
 
         if (this.player?.active)
         {
             const seat = this.getPlayerSeatWorld();
 
+            // 화면 방향이 바뀌면 배율(roomScale·characterBoost)도 달라지므로 내 양 크기도 다시 맞춘다. (다른 양은 layoutDemoOccupants에서 맞춘다)
+            this.scalePassenger(this.player);
             this.player.setPosition(seat.x, seat.y);
             this.syncPlayerDepth();
             this.layoutDemoOccupants();
             this.syncAllReactionEmojiPositions();
         }
 
+        this.layoutMeChip();
         this.layoutWool();
     }
 
@@ -521,7 +602,7 @@ export class WaitingRoom extends Scene
         this.wool.setPosition(pos.x, pos.y - extraLift + (1 - intro) * 16 * this.roomScale);
         this.wool.setScale(((width * this.roomScale) / this.wool.width) * intro);
         this.wool.setAlpha(Math.min(1, intro * 2));
-        this.wool.setDepth(this.getSeatedPlayerDepth());
+        this.wool.setDepth(HEAD_MARKER_DEPTH - 1); // 의자·양보다 항상 앞
 
         // 라벨은 React가 그린다. 위치(캔버스 px)와 글자 크기만 알려준다.
         const fontSize = Math.max(11, Math.round(WOOL.labelFontSize * this.roomScale * (this.isMobileLayout ? WOOL.mobileScale : 1)));
@@ -560,37 +641,105 @@ export class WaitingRoom extends Scene
             return;
         }
 
+        const previous = this.occupantsByTicketId.get(ticketId);
+
         this.occupantsByTicketId.set(ticketId, {
             sprite,
             isLocal: Boolean(options.isLocal),
-            seatConfig: options.seatConfig ?? null
+            seatConfig: options.seatConfig ?? previous?.seatConfig ?? null
         });
     }
 
-    spawnDemoOccupants ()
+    // 서버 좌석 번호(1부터)에 대응하는 고정 자리 표. 번호 순서대로 벤치마다 3자리씩 배정한다.
+    // 내 양은 화면의 내 자리(플레이어 벤치)에 앉으므로, 내 좌석 번호의 자리와 내 자리를 맞바꿔 둔다.
+    // ponytail: 내 좌석이 내 자리와 다르면 두 자리가 바뀌어 보인다. 내 양을 내 좌석 번호 자리에 앉히려면 플레이어 좌석 코드를 일반화해야 한다.
+    buildSeatTable (mySeatNumber)
     {
-        WAITING_ROOM_DEMO_OCCUPANTS.forEach((config) =>
-        {
-            const slot = WAITING_ROOM_BENCH_SLOTS[config.benchSlotIndex];
+        const seats = [];
 
-            if (!slot)
+        WAITING_ROOM_BENCH_SLOTS.forEach((_, benchSlotIndex) =>
+        {
+            for (let seatIndex = 0; seatIndex < SHEEP_SEATS_PER_BENCH; seatIndex += 1)
+            {
+                seats.push({ benchSlotIndex, seatIndex });
+            }
+        });
+
+        const playerIndex = PLAYER_BENCH_SLOT_INDEX * SHEEP_SEATS_PER_BENCH + PLAYER_BENCH_SEAT_INDEX;
+
+        if (mySeatNumber != null && seats[mySeatNumber - 1])
+        {
+            [seats[mySeatNumber - 1], seats[playerIndex]] = [seats[playerIndex], seats[mySeatNumber - 1]];
+        }
+
+        return seats;
+    }
+
+    // 서버 접속자 목록대로 다른 양들을 앉히고 나간 양은 치운다. 입석(seatNumber가 null)은 그리지 않는다.
+    applyPassengers ({ passengers = [], myTicketNumber = null })
+    {
+        const mySeatNumber = passengers.find((passenger) => passenger.ticketNumber === myTicketNumber)?.seatNumber ?? null;
+
+        this.isLocalStanding = passengers.some((passenger) => passenger.ticketNumber === myTicketNumber) && mySeatNumber == null;
+        const seats = this.buildSeatTable(mySeatNumber);
+        const present = new Set();
+
+        passengers.forEach((passenger) =>
+        {
+            const seatConfig = passenger.seatNumber == null ? null : seats[passenger.seatNumber - 1];
+            // 내가 서 있으면(입석) 내 자리를 맞바꾸지 않으므로, 그 자리에 앉을 다른 양은 그리지 않는다.
+            const isPlayerSpot = seatConfig?.benchSlotIndex === PLAYER_BENCH_SLOT_INDEX && seatConfig?.seatIndex === PLAYER_BENCH_SEAT_INDEX;
+
+            if (passenger.ticketNumber === myTicketNumber || !seatConfig || isPlayerSpot)
             {
                 return;
             }
 
-            const seat = this.getSeatWorldFromBench(config.benchSlotIndex, config.seatIndex);
-            const sprite = this.add.sprite(seat.x, seat.y, `sit-${config.sitDirection}`);
+            present.add(passenger.ticketNumber);
 
-            sprite.setOrigin(0.5, 1);
-            sprite.setDepth(this.getSeatedSpriteDepth(seat.y, slot));
+            const existing = this.occupantsByTicketId.get(passenger.ticketNumber);
 
-            this.registerOccupant(config.ticketId, sprite, {
-                isLocal: false,
-                seatConfig: {
-                    benchSlotIndex: config.benchSlotIndex,
-                    seatIndex: config.seatIndex
-                }
-            });
+            if (existing)
+            {
+                existing.seatConfig = seatConfig;
+                return;
+            }
+
+            const slot = WAITING_ROOM_BENCH_SLOTS[seatConfig.benchSlotIndex];
+            const sprite = this.add.sprite(0, 0, 'passenger');
+
+            this.applyPassengerFrame(sprite, slot.flipX);
+            this.enablePassengerTap(sprite, passenger.ticketNumber);
+            this.registerOccupant(passenger.ticketNumber, sprite, { isLocal: false, seatConfig });
+        });
+
+        [...this.occupantsByTicketId.entries()].forEach(([ticketNumber, occupant]) =>
+        {
+            if (!occupant.isLocal && !present.has(ticketNumber))
+            {
+                this.clearReactionEmoji(ticketNumber);
+                occupant.sprite.destroy();
+                this.occupantsByTicketId.delete(ticketNumber);
+            }
+        });
+
+        this.layoutDemoOccupants();
+    }
+
+    // 다른 승객의 양을 누르면 승객 카드를 열도록 React에 알린다.
+    // 양 이미지는 둘레가 투명해서 실제 그림이 있는 픽셀만 누를 수 있게 한다(옆 양이 대신 눌리지 않게).
+    enablePassengerTap (sprite, ticketNumber)
+    {
+        sprite.setData('ticketNumber', ticketNumber);
+        sprite.setInteractive({ useHandCursor: true, pixelPerfect: true });
+        sprite.on('pointerup', (pointer) =>
+        {
+            if (pointer.getDistance() > PASSENGER_TAP_MAX_MOVE_PX)
+            {
+                return;
+            }
+
+            EventBus.emit('passenger-card-open', { ticketNumber: sprite.getData('ticketNumber') });
         });
     }
 
@@ -600,8 +749,8 @@ export class WaitingRoom extends Scene
         const texture = getBenchSeatTexture(slot, seatIndex);
         const world = this.textureToWorld(texture.x, texture.y);
 
-        world.y += PLAYER_SEAT_WORLD_Y_NUDGE;
-        world.y += getBenchSeatWorldYNudge(seatIndex);
+        // 화면이 작아지면 양이 뜨는 높이도 같이 줄어야 벤치에 맞게 앉는다.
+        world.y += (PLAYER_SEAT_WORLD_Y_NUDGE - SHEEP_LIFT_Y - (this.isMobileLayout ? MOBILE_SHEEP_EXTRA_LIFT : PC_SHEEP_EXTRA_LIFT) + getBenchSeatWorldYNudge(seatIndex)) * this.roomScale;
 
         return world;
     }
@@ -619,8 +768,14 @@ export class WaitingRoom extends Scene
             const slot = WAITING_ROOM_BENCH_SLOTS[benchSlotIndex];
             const seat = this.getSeatWorldFromBench(benchSlotIndex, seatIndex);
 
+            this.scalePassenger(occupant.sprite);
             occupant.sprite.setPosition(seat.x, seat.y);
-            occupant.sprite.setDepth(this.getSeatedSpriteDepth(seat.y, slot));
+            // 눈 감은 이미지는 좌우가 따로 있어서 뒤집지 않는다. (배경을 끌거나 화면이 바뀔 때 반대로 돌아가는 것을 막는다)
+            if (occupant.sprite.texture.key === 'passenger')
+            {
+                occupant.sprite.setFlipX(Boolean(slot.flipX));
+            }
+            occupant.sprite.setDepth(this.getSeatedSpriteDepth(slot, seatIndex));
         });
     }
 
@@ -631,11 +786,13 @@ export class WaitingRoom extends Scene
         return benchFoot.y + 1;
     }
 
-    getSeatedSpriteDepth (worldFootY, benchSlot)
+    getSeatedSpriteDepth (benchSlot, seatIndex = 0)
     {
         const benchDepth = this.getSeatedDepthAtBenchFoot(benchSlot);
+        // 왼쪽 기준 좌하단(0)이 앞, 우상단이 뒤다.
+        const frontOrder = (SHEEP_SEATS_PER_BENCH - 1) - seatIndex;
 
-        return Math.max(benchDepth + 1, worldFootY + 0.5);
+        return benchDepth + 1 + frontOrder;
     }
 
     getSpriteFootDepth (sprite)
@@ -646,6 +803,46 @@ export class WaitingRoom extends Scene
         }
 
         return sprite.y + 1;
+    }
+
+    isLocalReaction (ticketId)
+    {
+        if (!this.player?.active)
+        {
+            return false;
+        }
+
+        if (ticketId == null)
+        {
+            return true;
+        }
+
+        return ticketId === this.localTicketId;
+    }
+
+    layoutMeChip ()
+    {
+        if (!this.meChip)
+        {
+            return;
+        }
+
+        const show = this.player?.active && this._atBenchSeat && !this.reactionEmojisByTicketId.has(this.reactionKey(this.localTicketId));
+
+        this.meChip.setVisible(show);
+
+        if (!show)
+        {
+            return;
+        }
+
+        // 처음 앉을 때는 아래에서 위로 올라오며 나타난다.
+        const headY = this.player.y - this.player.displayHeight * 0.92 + (1 - this.meChipIntro) * 16 * this.roomScale;
+
+        this.meChip.setAlpha(this.meChipIntro);
+        this.meChip.setPosition(this.player.x, headY);
+        this.meChip.setScale((ME_CHIP_WIDTH * this.roomScale) / this.meChip.width);
+        this.meChip.setDepth(HEAD_MARKER_DEPTH);
     }
 
     resolveOccupantSprite (ticketId)
@@ -693,12 +890,24 @@ export class WaitingRoom extends Scene
             entry.timer.remove(false);
         }
 
-        if (entry.text?.active)
+        if (entry.icon?.active)
         {
-            entry.text.destroy();
+            entry.icon.destroy();
+        }
+
+        // 눈 감은 모습을 원래 앉은 모습으로 되돌린다.
+        if (entry.sprite?.active && entry.sprite.texture.key.startsWith('passenger-closed'))
+        {
+            entry.sprite.setTexture('passenger');
+            this.applyPassengerFrame(entry.sprite, entry.flipX);
         }
 
         this.reactionEmojisByTicketId.delete(key);
+
+        if (this.isLocalReaction(ticketId))
+        {
+            this.layoutMeChip();
+        }
     }
 
     clearAllReactionEmojis ()
@@ -720,18 +929,26 @@ export class WaitingRoom extends Scene
             const ticketId = key === 'local' ? this.localTicketId : Number(key);
             const sprite = this.resolveOccupantSprite(ticketId);
 
-            if (!sprite?.active || !entry.text?.active)
+            if (!sprite?.active || !entry.icon?.active)
             {
                 return;
             }
 
-            const offsetY = sprite.displayHeight * 0.92;
-            const fontSize = Math.max(18, Math.round(26 * this.roomScale));
+            const offsetY = sprite.displayHeight * (this.isMobileLayout ? MOBILE_REACTION_ICON_HEAD_RATIO : REACTION_ICON_HEAD_RATIO);
 
-            entry.text.setPosition(sprite.x, sprite.y - offsetY);
-            entry.text.setDepth(this.getSpriteFootDepth(sprite) + 2);
-            entry.text.setFontSize(`${fontSize}px`);
+            entry.icon.setPosition(sprite.x, sprite.y - offsetY);
+            entry.icon.setDepth(HEAD_MARKER_DEPTH + 1);
+            entry.icon.setScale((REACTION_ICON_WIDTH * this.roomScale * (this.isMobileLayout ? MOBILE_REACTION_ICON_BOOST : 1)) / entry.icon.width);
         });
+    }
+
+    // 리액션 종류별 효과음. 끄덕끄덕 = good, 전해요 = heart
+    playReactionSound (reactionType)
+    {
+        if (this.cache.audio.exists(`reaction-${reactionType}-sound`))
+        {
+            this.sound.play(`reaction-${reactionType}-sound`);
+        }
     }
 
     showReactionForOccupant (ticketId, reactionType)
@@ -743,47 +960,65 @@ export class WaitingRoom extends Scene
             return;
         }
 
+        const texture = getReactionTexture(reactionType);
+
+        if (!texture)
+        {
+            return;
+        }
+
         const key = this.reactionKey(ticketId);
+
+        this.playReactionSound(reactionType);
 
         this.clearReactionEmoji(ticketId);
 
-        const emoji = getReactionEmoji(reactionType);
-        const offsetY = sprite.displayHeight * 0.92;
-        const fontSize = Math.max(18, Math.round(26 * this.roomScale));
+        // 앉은 양이면 눈을 감는다. 왼쪽 벤치 양은 left, 오른쪽 벤치 양은 right 이미지를 쓴다.
+        const flipX = sprite.flipX;
+        const canClose = sprite.texture.key === 'passenger';
 
-        const text = this.add.text(sprite.x, sprite.y - offsetY, emoji, {
-            fontFamily: 'Pretendard Variable, Pretendard, Apple Color Emoji, Segoe UI Emoji, sans-serif',
-            fontSize: `${fontSize}px`
-        });
+        if (canClose)
+        {
+            sprite.setTexture(flipX ? 'passenger-closed-right' : 'passenger-closed-left');
+            this.applyPassengerFrame(sprite, false);
+        }
 
-        text.setOrigin(0.5, 1);
-        text.setDepth(this.getSpriteFootDepth(sprite) + 2);
-        text.setAlpha(0);
+        const offsetY = sprite.displayHeight * (this.isMobileLayout ? MOBILE_REACTION_ICON_HEAD_RATIO : REACTION_ICON_HEAD_RATIO);
+        const icon = this.add.image(sprite.x, sprite.y - offsetY, texture).setOrigin(0.5, 1);
+
+        icon.setScale((REACTION_ICON_WIDTH * this.roomScale * (this.isMobileLayout ? MOBILE_REACTION_ICON_BOOST : 1)) / icon.width);
+        icon.setDepth(HEAD_MARKER_DEPTH + 1);
+        icon.setAlpha(0);
 
         this.tweens.add({
-            targets: text,
+            targets: icon,
             alpha: 1,
-            y: text.y - 6,
+            y: icon.y - 6,
             duration: 180,
             ease: 'Sine.easeOut'
         });
 
         const timer = this.time.delayedCall(REACTION_FEEDBACK_MS, () =>
         {
-            if (!text.active)
+            if (!icon.active)
             {
                 return;
             }
 
             this.tweens.add({
-                targets: text,
+                targets: icon,
                 alpha: 0,
                 duration: 200,
                 onComplete: () => this.clearReactionEmoji(ticketId)
             });
         });
 
-        this.reactionEmojisByTicketId.set(key, { text, timer });
+        this.reactionEmojisByTicketId.set(key, { icon, timer, sprite, flipX });
+
+        if (this.isLocalReaction(ticketId))
+        {
+            this.layoutMeChip();
+        }
     }
 
     getPlayerSeatWorld (getSeatTexture = getPlayerSeatTexture)
@@ -791,25 +1026,22 @@ export class WaitingRoom extends Scene
         const seatTexture = getSeatTexture();
         const seat = this.textureToWorld(seatTexture.x, seatTexture.y);
 
-        seat.y += PLAYER_SEAT_WORLD_Y_NUDGE;
-        seat.y += getBenchSeatWorldYNudge(PLAYER_BENCH_SEAT_INDEX);
+        // 화면이 작아지면 양이 뜨는 높이도 같이 줄어야 벤치에 맞게 앉는다.
+        seat.y += (PLAYER_SEAT_WORLD_Y_NUDGE - SHEEP_LIFT_Y - (this.isMobileLayout ? MOBILE_SHEEP_EXTRA_LIFT : PC_SHEEP_EXTRA_LIFT) + getBenchSeatWorldYNudge(PLAYER_BENCH_SEAT_INDEX)) * this.roomScale;
 
         return seat;
     }
 
     createBenches ()
     {
-        const benchTexture = this.textures.get('waiting-room-bench');
-        const source = benchTexture.getSourceImage();
-        const nativeWidth = source.width;
-
-        const scaleInTexture = WAITING_ROOM_BENCH_WIDTH_TEXTURE / nativeWidth;
-
-        WAITING_ROOM_BENCH_SLOTS.forEach(() =>
+        WAITING_ROOM_BENCH_SLOTS.forEach((_, index) =>
         {
-            const bench = this.add.image(0, 0, 'waiting-room-bench');
+            // 슬롯은 (왼쪽, 오른쪽) 쌍이다. 양쪽 맨 바깥 2개(쌍 0, 2번)만 덩굴 벤치, 나머지는 민무늬.
+            const key = [0, 2].includes(Math.floor(index / 2)) ? 'bench-vine' : 'bench-plain';
+            const bench = this.add.image(0, 0, key);
+
             bench.setOrigin(0.5, 1);
-            bench._textureScale = scaleInTexture;
+            bench._textureScale = WAITING_ROOM_BENCH_WIDTH_TEXTURE / bench.width;
             this.benches.push(bench);
         });
 
@@ -849,7 +1081,7 @@ export class WaitingRoom extends Scene
             const entrance = this.textureToWorld(ENTRANCE_TEXTURE.x, ENTRANCE_TEXTURE.y);
 
             this.player = this.add.sprite(entrance.x, entrance.y, 'walk-south-west-0');
-            this.player.setOrigin(0.5, 1);
+            this.applyPassengerFrame(this.player, false);
             this.player.setDepth(entrance.y);
             this.walkToSeat();
         }
@@ -879,7 +1111,7 @@ export class WaitingRoom extends Scene
 
         if (this.player?.active)
         {
-            return this.getSeatedSpriteDepth(this.player.y, playerSlot);
+            return this.getSeatedSpriteDepth(playerSlot, PLAYER_BENCH_SEAT_INDEX);
         }
 
         return this.getSeatedDepthAtBenchFoot(playerSlot);
@@ -892,7 +1124,7 @@ export class WaitingRoom extends Scene
             return;
         }
 
-        const isSeated = this.player.texture?.key?.startsWith('sit-');
+        const isSeated = this.player.texture?.key === 'passenger';
 
         if (isSeated || this._atBenchSeat)
         {
@@ -904,53 +1136,91 @@ export class WaitingRoom extends Scene
         }
     }
 
+    layoutStationMaster ()
+    {
+        if (!this.stationMaster)
+        {
+            return;
+        }
+
+        const pos = this.textureToWorld(STATION_MASTER_TEXTURE.x, STATION_MASTER_TEXTURE.y);
+
+        this.stationMaster.setPosition(pos.x, pos.y);
+        this.stationMaster.setScale(((this.isMobileLayout ? STATION_MASTER_MOBILE_DISPLAY_PX : STATION_MASTER_DISPLAY_PX) * this.roomScale) / this.stationMaster.width);
+        this.stationMaster.setDepth(pos.y);
+        EventBus.emit('station-master-anchor', {
+            x: pos.x,
+            y: pos.y - this.stationMaster.displayHeight * 0.95
+        });
+    }
+
+    applyPassengerFrame (sprite, flipX)
+    {
+        sprite.setOrigin(0.5, 1);
+        sprite.setFlipX(Boolean(flipX));
+        this.scalePassenger(sprite);
+    }
+
+    // 양 크기는 배경(벤치)과 같이 roomScale을 따라간다. 그래야 작은 화면에서도 벤치와 비율이 맞는다.
+    scalePassenger (sprite)
+    {
+        const isWalking = sprite.texture.key.startsWith('walk-');
+
+        sprite.setScale(((PASSENGER_DISPLAY_PX * this.roomScale * (this.characterBoost ?? 1)) / sprite.width) * (isWalking ? WALK_SCALE_RATIO : 1));
+    }
+
     placeSeatedPlayer (x, y)
     {
         this._atBenchSeat = true;
-        this.player = this.add.sprite(x, y, `sit-${PLAYER_SEATED_DIRECTION}`);
-        this.player.setOrigin(0.5, 1);
+        this.player = this.add.sprite(x, y, 'passenger');
+        this.applyPassengerFrame(this.player, false);
         this.syncPlayerDepth();
         this.bindLocalPlayerTicket(this.localTicketId);
         this.wool.setVisible(true);
         this.layoutWool();
+        this.layoutMeChip();
     }
 
     createWalkAnimations ()
     {
-        ['south-east', 'south-west'].forEach((direction) =>
+        if (this.anims.exists('walk-south-west'))
         {
-            if (this.anims.exists(`walk-${direction}`))
-            {
-                return;
-            }
+            return;
+        }
 
-            this.anims.create({
-                key: `walk-${direction}`,
-                frames: [0, 1, 2, 3, 4, 5].map((frame) => ({ key: `walk-${direction}-${frame}` })),
-                frameRate: 10,
-                repeat: -1
-            });
+        this.anims.create({
+            key: 'walk-south-west',
+            frames: [0, 1, 2].map((frame) => ({ key: `walk-south-west-${frame}` })),
+            frameRate: 10,
+            repeat: -1
         });
     }
 
     walkToSeat ()
     {
-        const seat = this.getPlayerSeatWorld();
+        const progress = { t: 0 };
 
         this._atBenchSeat = false;
         this.player.setOrigin(0.5, 1);
         this.player.play('walk-south-west');
+        // 걷는 도중 시점을 옮겨도 어긋나지 않게, 목표 좌표 대신 진행도만 움직이고 위치는 매 프레임 현재 방 좌표로 계산한다.
         this.tweens.add({
-            targets: this.player,
-            x: seat.x,
-            y: seat.y,
+            targets: progress,
+            t: 1,
             duration: WALK_MS,
-            onUpdate: () => this.syncPlayerDepth(),
-            onComplete: () => this.finishSitting(seat.x, seat.y)
+            onUpdate: () =>
+            {
+                const from = this.textureToWorld(ENTRANCE_TEXTURE.x, ENTRANCE_TEXTURE.y);
+                const to = this.getPlayerSeatWorld();
+
+                this.player.setPosition(from.x + (to.x - from.x) * progress.t, from.y + (to.y - from.y) * progress.t);
+                this.syncPlayerDepth();
+            },
+            onComplete: () => this.finishSitting()
         });
     }
 
-    finishSitting (x, y)
+    finishSitting ()
     {
         if (!this.player?.active)
         {
@@ -970,12 +1240,23 @@ export class WaitingRoom extends Scene
                 return;
             }
 
-            this.player.setTexture(`sit-${PLAYER_SEATED_DIRECTION}`);
-            this.player.setOrigin(0.5, 1);
-            this.player.setPosition(x, y);
+            this.player.setTexture('passenger');
+            this.applyPassengerFrame(this.player, false);
+            const seat = this.getPlayerSeatWorld();
+
+            this.player.setPosition(seat.x, seat.y);
             this.syncPlayerDepth();
             this.bindLocalPlayerTicket(this.localTicketId);
             this.revealWool();
+            this.meChipIntro = 0;
+            this.layoutMeChip();
+            this.tweens.add({
+                targets: this,
+                meChipIntro: 1,
+                duration: 450,
+                ease: 'Cubic.easeOut',
+                onUpdate: () => this.layoutMeChip()
+            });
 
             const sitHoldMs = Math.max(0, SIT_MS - TURN_MS);
 

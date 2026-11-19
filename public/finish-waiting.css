@@ -98,6 +98,17 @@
     font-weight: 400;
 }
 
+/* 버튼 오른쪽의 짧은 글자 (온보딩 대기실 선택의 인원) */
+.finish-waiting-badge {
+    flex-shrink: 0;
+    padding: 4px 10px;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
 .finish-waiting-check {
     display: grid;
     place-items: center;
@@ -106,6 +117,10 @@
     height: 30px;
     border-radius: 50%;
     background: #fff;
+}
+
+.finish-waiting-check.is-empty {
+    visibility: hidden;
 }
 
 .finish-waiting-check img {
@@ -216,6 +231,22 @@
     display: block;
     width: 120px;
     height: 40px;
+    transition: transform 0.12s ease-out, filter 0.12s ease-out;
+}
+
+/* 다음 버튼: 마우스를 올리면 살짝 커지고, 누르면 눌리듯 작아졌다 돌아온다 (버튼 자체는 위치용 transform이 있어 이미지에 준다) */
+.finish-waiting-next:not(:disabled):hover img {
+    transform: scale(1.06);
+    filter: brightness(1.05);
+}
+
+.finish-waiting-next:not(:disabled):active img {
+    transform: scale(0.92);
+    filter: brightness(0.92);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .finish-waiting-next img { transition: none; }
 }
 
 /* 모바일: 버튼과 글자를 줄여 화면 폭에 맞춘다 */
@@ -254,6 +285,11 @@
     }
 
     .finish-waiting-text span {
+        font-size: 10px;
+    }
+
+    .finish-waiting-badge {
+        padding: 2px 6px;
         font-size: 10px;
     }
 
@@ -301,4 +337,20 @@
         width: 14vh;
         height: 4.7vh;
     }
+}
+
+/* 선택 버튼: 온보딩 대기실 목록과 같이 위로 떠오르며 차례로 나타나고, 호버하면 뜨고 누르면 눌린다 */
+.finish-waiting-menu .finish-waiting-btn {
+    transition: transform 0.2s ease;
+    animation: onboarding-choice-in 0.5s ease-out backwards;
+}
+
+.finish-waiting-menu .finish-waiting-btn:nth-child(3) { animation-delay: 0.12s; }
+.finish-waiting-menu .finish-waiting-btn:nth-child(4) { animation-delay: 0.24s; }
+
+.finish-waiting-menu .finish-waiting-btn:hover { transform: translateY(-4px); }
+.finish-waiting-menu .finish-waiting-btn:active { transform: scale(0.98); }
+
+@media (prefers-reduced-motion: reduce) {
+    .finish-waiting-menu .finish-waiting-btn { animation: none; transition: none; }
 }

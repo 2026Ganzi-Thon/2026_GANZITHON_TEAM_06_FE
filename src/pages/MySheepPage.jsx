@@ -1,66 +1,43 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 import AppHeader from '../components/common/AppHeader';
+import BlanketArt from '../components/common/BlanketArt';
 import PanelFrame from '../components/common/PanelFrame';
 import { toPiece } from '../data/pieces';
-import { readPendingPieces } from '../game/onboardingSession';
+import { clearOnboardingTrip, readPendingPieces } from '../game/onboardingSession';
 import { clearAuth, readAccessToken } from '../services/auth';
 import { fetchBlanketPieces } from '../services/blanketPieces';
 import { fetchMe, updatePublicSetting } from '../services/users';
+import { useBackgroundMusic, useMusicMuted } from '../utils/useBackgroundMusic';
 
 const TABS = [
     { key: 'blanket', label: '내 담요' },
     { key: 'storage', label: '임시 보관' },
 ];
 
-// blanket-panel.svg(390 x 416.441) 안 3 x 3 칸의 위치. 칸 크기는 97.2639 x 96.3196 입니다.
-const BLANKET_W = 390;
-const BLANKET_H = 416.441;
-const CELL_COLS = [33, 141, 249];
-const CELL_ROWS = [50, 160, 270];
-const CELL_W = 97.2639;
-const CELL_H = 96.3196;
-
-// 담요 그림 위 3 x 3 칸에 조각을 얹어 보여 줍니다. 임시 조각(temp)은 임시 보관용 상세 주소로 연결합니다.
-function BlanketArt({ pieces, alt })
-{
-    return (
-        <div className="my-sheep-blanket__art">
-            <img src="/assets/mypage/blanket-panel.svg" alt={alt} />
-            {pieces.slice(0, CELL_COLS.length * CELL_ROWS.length).map((piece, i) => (
-                <Link
-                    key={`${piece.id}-${i}`}
-                    to={`/my-sheep/piece/${piece.id}${piece.temp ? '?from=storage' : ''}`}
-                    className="my-sheep-blanket__cell"
-                    aria-label={`${piece.name} 조각 보기`}
-                    style={{
-                        left: `${(CELL_COLS[i % CELL_COLS.length] / BLANKET_W) * 100}%`,
-                        top: `${(CELL_ROWS[Math.floor(i / CELL_COLS.length)] / BLANKET_H) * 100}%`,
-                        width: `${(CELL_W / BLANKET_W) * 100}%`,
-                        height: `${(CELL_H / BLANKET_H) * 100}%`,
-                    }}
-                >
-                    {piece.image && <img src={piece.image} alt="" />}
-                </Link>
-            ))}
-        </div>
-    );
-}
+// 담요 칸을 누르면 그 조각의 상세로 갑니다. 임시 조각(temp)은 임시 보관용 상세 주소로 연결합니다.
+const pieceDetailLink = (piece) => `/my-sheep/piece/${piece.id}${piece.temp ? '?from=storage' : ''}`;
 
 export default function MySheepPage()
 {
+    useBackgroundMusic('/assets/sounds/finish.mp3', 0.3);
+    const [isMusicMuted, toggleMusicMuted] = useMusicMuted();
     // 탭을 주소(?tab=)에 두어, 조각 상세에서 뒤로 돌아와도 보던 탭이 유지됩니다.
     const [searchParams, setSearchParams] = useSearchParams();
     const tab = searchParams.get('tab') === 'storage' ? 'storage' : 'blanket';
-    const setTab = (key) => setSearchParams({ tab: key }, { replace: true });
+    const location = useLocation();
+    // 탭을 바꿔도 exitTo 같은 location.state가 사라지지 않게 함께 넘깁니다.
+    const setTab = (key) => setSearchParams({ tab: key }, { replace: true, state: location.state });
     const navigate = useNavigate();
+    const exitTo = location.state?.exitTo;
     const isBlanket = tab === 'blanket';
     const [token, setToken] = useState(readAccessToken);
     const [me, setMe] = useState(null);
     const [pieces, setPieces] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+    const [isLoggedOut, setIsLoggedOut] = useState(false);
     // 임시 조각함: 브라우저에 보관한 비로그인 조각
     const tempPieces = useMemo(() => readPendingPieces().map((data, i) => ({ ...toPiece(data, i), temp: true })), []);
     const isPublic = me?.isPublic ?? false;
@@ -90,8 +67,11 @@ export default function MySheepPage()
     }, [token]);
 
     // 로그아웃은 서버 API가 없어 토큰만 지웁니다.
+    // 로그인 중에 받은 승차권은 로그아웃하면 다룰 수 없어 함께 지우고, 닫으면 이전 화면 대신 처음 화면으로 갑니다.
     const handleLogout = () => {
         clearAuth();
+        clearOnboardingTrip();
+        setIsLoggedOut(true);
         setToken(null);
         setMe(null);
         setPieces([]);
@@ -107,7 +87,9 @@ export default function MySheepPage()
         }
     };
 
-    const goSave = () => navigate('/finish-waiting/save');
+    const exitPath = isLoggedOut ? '/' : exitTo;
+
+    const goSave = () => navigate('/finish-waiting/save', { state: { from: 'my-sheep', exitTo } });
 
     // 로그인 전 안내 카드 (임시 보관 탭과 로그아웃 상태의 내 담요 탭에서 함께 씁니다)
     const promo = (
@@ -128,7 +110,17 @@ export default function MySheepPage()
     return (
         <main className="my-sheep-page">
             <AppHeader collapseOnDrag showMySheep={false} />
+            <button
+                type="button"
+                className={isMusicMuted ? 'my-sheep-music is-muted' : 'my-sheep-music'}
+                aria-label={isMusicMuted ? '배경음악 켜기' : '배경음악 끄기'}
+                aria-pressed={!isMusicMuted}
+                onClick={toggleMusicMuted}
+            >
+                <img src="/assets/backgrounds/onboarding/icon-announce.svg" alt="" />
+            </button>
             <PanelFrame
+                onExit={exitPath ? () => navigate(exitPath) : undefined}
                 actions={isBlanket && token && (
                     <button type="button" className="my-sheep-logout" onClick={handleLogout}>
                         <img src="/assets/mypage/logout.png" alt="" />
@@ -164,7 +156,7 @@ export default function MySheepPage()
                                 <div className="my-sheep-box my-sheep-box--side">
                                     <h3 className="my-sheep-box-title">내 담요</h3>
                                     <div className="my-sheep-blanket">
-                                        <BlanketArt pieces={pieces} alt="내 담요" />
+                                        <BlanketArt pieces={pieces} alt="내 담요" getLink={pieceDetailLink} />
                                     </div>
                                 </div>
                                 <div className="my-sheep-box">
@@ -230,7 +222,7 @@ export default function MySheepPage()
                                     <h3 className="my-sheep-box-title">내 담요 미리보기</h3>
                                     <div className="my-sheep-blanket">
                                         {/* 임시 조각함에 담긴 조각만 보여 준다 */}
-                                        <BlanketArt pieces={tempPieces} alt="내 담요 미리보기" />
+                                        <BlanketArt pieces={tempPieces} alt="내 담요 미리보기" getLink={pieceDetailLink} />
                                     </div>
                                 </div>
                             ) : promo}
