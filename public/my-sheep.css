@@ -860,3 +860,49 @@
         animation: none;
     }
 }
+
+/* 배경음악 켜기/끄기 버튼: 화면 왼쪽 위(헤더 아래)에 붙는 원. 꺼지면 회색에 빗금이 그어진다 */
+.my-sheep-music {
+    position: fixed;
+    top: 64px;
+    left: var(--space-md);
+    z-index: 4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--color-bar);
+    cursor: pointer;
+    transition: background 0.15s ease-out, transform 0.12s ease-out;
+}
+
+.my-sheep-music:active {
+    transform: scale(0.92);
+}
+
+.my-sheep-music img {
+    width: 20px;
+    height: 20px;
+}
+
+.my-sheep-music.is-muted {
+    background: var(--color-brown-text);
+}
+
+.my-sheep-music.is-muted::after {
+    content: '';
+    position: absolute;
+    width: 26px;
+    height: 2px;
+    border-radius: 1px;
+    background: #fff;
+    transform: rotate(-45deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .my-sheep-music { transition: none; }
+}

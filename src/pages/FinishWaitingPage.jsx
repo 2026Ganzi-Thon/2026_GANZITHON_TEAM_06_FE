@@ -9,6 +9,7 @@ import { INTRO_STEP, SCENARIOS } from '../data/finishWaitingScenarios';
 import { toPiece } from '../data/pieces';
 import { readGuestToken, readOnboardingTrip } from '../game/onboardingSession';
 import { endTicket, fetchTicket } from '../services/tickets';
+import { useBackgroundMusic } from '../utils/useBackgroundMusic';
 
 // 받은 조각이 상자에서 나오는 연출을 보여 준 뒤 저장 화면으로 넘어가기까지의 시간(ms)
 const RECEIVE_ANIMATION_MS = 2200;
@@ -23,6 +24,7 @@ const OPTIONS = [
 
 export default function FinishWaitingPage()
 {
+    useBackgroundMusic('/assets/sounds/finish.mp3', 0.3);
     const navigate = useNavigate();
     const [selected, setSelected] = useState(0);
     // 0 = 처음 안내, 1~ = 선택한 버튼의 n번째 대사
@@ -69,7 +71,12 @@ export default function FinishWaitingPage()
     // 받은 도안의 조각 이미지를 연출로 보여 줍니다. 이미지가 없으면(알 수 없는 도안) 바로 저장 화면으로 갑니다.
     const showReceivedPiece = (patternCode) => {
         const image = toPiece({ patternCode }, 0).image;
-        if (image) setReceivedImage(image);
+        if (image)
+        {
+            // 조각이 상자에서 튀어나오는 순간 효과음을 낸다. 자동재생 차단 등으로 실패해도 무시한다.
+            new Audio('/assets/sounds/box-pop.mp3').play().catch(() => {});
+            setReceivedImage(image);
+        }
         else navigate('/finish-waiting/save');
     };
 

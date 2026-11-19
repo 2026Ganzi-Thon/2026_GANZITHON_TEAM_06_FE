@@ -5,6 +5,7 @@ import { readPendingPieces } from '../game/onboardingSession';
 import { readAccessToken } from '../services/auth';
 import { claimPendingTickets } from '../services/tickets';
 import { login, signup } from '../services/users';
+import { useBackgroundMusic } from '../utils/useBackgroundMusic';
 
 const NICKNAME_MAX = 12;
 const TOAST_MS = 1800;
@@ -13,6 +14,7 @@ const NICKNAME_PATTERN = /^[가-힣a-zA-Z0-9]{1,12}$/;
 // 배경은 기다림 마치기 화면과 같아서 finish-waiting-page 클래스를 함께 씁니다.
 export default function FinishSavePage()
 {
+    useBackgroundMusic('/assets/sounds/finish.mp3', 0.3);
     const navigate = useNavigate();
     const location = useLocation();
     const [isLogin, setIsLogin] = useState(false);
@@ -138,7 +140,7 @@ export default function FinishSavePage()
                         <button
                             type="button"
                             className="finish-save-btn finish-save-btn-later"
-                            onClick={() => navigate('/my-sheep', { replace: true, state: { exitTo: '/waiting-room' } })}
+                            onClick={() => navigate('/my-sheep', { replace: true, state: { exitTo: '/finish-waiting/save' } })}
                         >
                             내 담요 보기
                         </button>

@@ -237,6 +237,8 @@ export class WaitingRoom extends Scene
 
         // 씬이 꺼질 때 EventBus 구독을 풀어 준다. (연결하지 않으면 씬이 다시 만들어진 뒤에도 옛 씬이 이벤트를 받아 'sys' 오류가 난다)
         this.events.once('shutdown', this.shutdown, this);
+        // 페이지를 떠나 game.destroy()로 지워질 때는 'shutdown'이 아니라 'destroy'만 발생하므로 같이 연결한다.
+        this.events.once('destroy', this.shutdown, this);
 
         EventBus.emit('current-scene-ready', this);
     }

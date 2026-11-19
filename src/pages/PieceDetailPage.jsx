@@ -6,9 +6,11 @@ import StackCarousel from '../components/common/StackCarousel';
 import { PIECE_BACK_IMAGE, toPiece, toRecord } from '../data/pieces';
 import { readPendingPieces } from '../game/onboardingSession';
 import { fetchBlanketPiece, fetchBlanketPieces } from '../services/blanketPieces';
+import { useBackgroundMusic } from '../utils/useBackgroundMusic';
 
 export default function PieceDetailPage()
 {
+    useBackgroundMusic('/assets/sounds/finish.mp3', 0.3);
     const navigate = useNavigate();
     const { pieceId } = useParams();
 
