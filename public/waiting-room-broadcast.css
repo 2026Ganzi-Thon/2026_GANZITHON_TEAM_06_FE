@@ -222,6 +222,11 @@
     pointer-events: none;
 }
 
+.waiting-room-reaction.is-anchored {
+    top: auto;
+    transform: translate(-50%, -100%);
+}
+
 .waiting-room-reaction-bubble {
     padding: var(--space-md);
     border: 3px solid #f3d5bc;

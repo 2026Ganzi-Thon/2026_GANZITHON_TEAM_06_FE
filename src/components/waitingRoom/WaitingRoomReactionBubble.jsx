@@ -5,6 +5,7 @@ import { EventBus } from '../../game/EventBus';
 import { WAITING_ROOM_REACTION_EVENT } from '../../game/waitingRoomReactionEvents';
 
 export default function WaitingRoomReactionBubble ({
+    anchor,
     broadcasterTicketNumber,
     reactingTicketId,
     isVisible,
@@ -86,7 +87,11 @@ export default function WaitingRoomReactionBubble ({
                 aria-label="리액션 닫기"
                 onClick={() => onDismiss?.()}
             />
-            <section className="waiting-room-reaction" aria-label="방송 리액션">
+            <section
+                className={anchor ? 'waiting-room-reaction is-anchored' : 'waiting-room-reaction'}
+                aria-label="방송 리액션"
+                style={anchor ? { left: anchor.x, top: anchor.y } : undefined}
+            >
                 <div
                     className="waiting-room-reaction-bubble"
                     role="group"

@@ -37,6 +37,9 @@ const PLAYER_SEAT_WORLD_Y_NUDGE = 13;
 const PASSENGER_DISPLAY_PX = 88;
 // 화면 위. 벤치 좌표는 그대로 두고 양만 올린다.
 const SHEEP_LIFT_Y = 80;
+// 대기실 복도 가운데. 발 위치(배경 텍스처).
+const STATION_MASTER_TEXTURE = { x: 721, y: 400 };
+const STATION_MASTER_DISPLAY_PX = 120;
 // 양·의자보다 앞에 두는 머리 위 표시 깊이.
 const HEAD_MARKER_DEPTH = 20000;
 // 시안 기준 머리 위 칩·리액션 너비(화면 px, roomScale을 곱한다).
@@ -134,6 +137,7 @@ export class WaitingRoom extends Scene
         this.occupantsByTicketId = new Map();
         this.reactionEmojisByTicketId = new Map();
         this.meChip = this.add.image(0, 0, 'me-chip').setOrigin(0.5, 1).setDepth(HEAD_MARKER_DEPTH).setVisible(false);
+        this.stationMaster = this.add.image(0, 0, 'station-master').setOrigin(0.5, 1);
         this._panX = null;
         this._panY = null;
         this._canPanX = false;
@@ -220,6 +224,7 @@ export class WaitingRoom extends Scene
         this.trainSound?.stop();
         this.clearAllReactionEmojis();
         this.meChip?.destroy();
+        this.stationMaster?.destroy();
         this.occupantsByTicketId.clear();
 
         if (this.handleTrainClockSync)
@@ -491,6 +496,7 @@ export class WaitingRoom extends Scene
         this.trainMaskShape.fillRect(areaTopLeft.x, areaTopLeft.y, (x2 - x1) * this.roomScale, (y2 - y1) * this.roomScale);
 
         this.layoutBenches();
+        this.layoutStationMaster();
 
         if (this.player?.active)
         {
@@ -966,6 +972,24 @@ export class WaitingRoom extends Scene
         {
             this.player.setDepth(this.player.y);
         }
+    }
+
+    layoutStationMaster ()
+    {
+        if (!this.stationMaster)
+        {
+            return;
+        }
+
+        const pos = this.textureToWorld(STATION_MASTER_TEXTURE.x, STATION_MASTER_TEXTURE.y);
+
+        this.stationMaster.setPosition(pos.x, pos.y);
+        this.stationMaster.setScale(STATION_MASTER_DISPLAY_PX / this.stationMaster.width);
+        this.stationMaster.setDepth(pos.y);
+        EventBus.emit('station-master-anchor', {
+            x: pos.x,
+            y: pos.y - this.stationMaster.displayHeight * 0.95
+        });
     }
 
     applyPassengerFrame (sprite, flipX)

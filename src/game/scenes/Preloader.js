@@ -38,6 +38,7 @@ export class Preloader extends Scene
         this.load.image('reaction-heart', 'ui/waiting-room/reaction-heart.png');
 
         this.load.image('passenger', 'characters/passenger/sit/passenger.png');
+        this.load.image('station-master', 'characters/station-master/waiting-room.png');
 
         for (let frame = 0; frame < WALK_FRAME_COUNT; frame += 1)
         {
