@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 import AppHeader from '../components/common/AppHeader';
+import BlanketArt from '../components/common/BlanketArt';
 import PanelFrame from '../components/common/PanelFrame';
 import { toPiece } from '../data/pieces';
 import { readPendingPieces } from '../game/onboardingSession';
@@ -14,39 +15,8 @@ const TABS = [
     { key: 'storage', label: '임시 보관' },
 ];
 
-// blanket-panel.svg(390 x 416.441) 안 3 x 3 칸의 위치. 칸 크기는 97.2639 x 96.3196 입니다.
-const BLANKET_W = 390;
-const BLANKET_H = 416.441;
-const CELL_COLS = [33, 141, 249];
-const CELL_ROWS = [50, 160, 270];
-const CELL_W = 97.2639;
-const CELL_H = 96.3196;
-
-// 담요 그림 위 3 x 3 칸에 조각을 얹어 보여 줍니다. 임시 조각(temp)은 임시 보관용 상세 주소로 연결합니다.
-function BlanketArt({ pieces, alt })
-{
-    return (
-        <div className="my-sheep-blanket__art">
-            <img src="/assets/mypage/blanket-panel.svg" alt={alt} />
-            {pieces.slice(0, CELL_COLS.length * CELL_ROWS.length).map((piece, i) => (
-                <Link
-                    key={`${piece.id}-${i}`}
-                    to={`/my-sheep/piece/${piece.id}${piece.temp ? '?from=storage' : ''}`}
-                    className="my-sheep-blanket__cell"
-                    aria-label={`${piece.name} 조각 보기`}
-                    style={{
-                        left: `${(CELL_COLS[i % CELL_COLS.length] / BLANKET_W) * 100}%`,
-                        top: `${(CELL_ROWS[Math.floor(i / CELL_COLS.length)] / BLANKET_H) * 100}%`,
-                        width: `${(CELL_W / BLANKET_W) * 100}%`,
-                        height: `${(CELL_H / BLANKET_H) * 100}%`,
-                    }}
-                >
-                    {piece.image && <img src={piece.image} alt="" />}
-                </Link>
-            ))}
-        </div>
-    );
-}
+// 담요 칸을 누르면 그 조각의 상세로 갑니다. 임시 조각(temp)은 임시 보관용 상세 주소로 연결합니다.
+const pieceDetailLink = (piece) => `/my-sheep/piece/${piece.id}${piece.temp ? '?from=storage' : ''}`;
 
 export default function MySheepPage()
 {
@@ -164,7 +134,7 @@ export default function MySheepPage()
                                 <div className="my-sheep-box my-sheep-box--side">
                                     <h3 className="my-sheep-box-title">내 담요</h3>
                                     <div className="my-sheep-blanket">
-                                        <BlanketArt pieces={pieces} alt="내 담요" />
+                                        <BlanketArt pieces={pieces} alt="내 담요" getLink={pieceDetailLink} />
                                     </div>
                                 </div>
                                 <div className="my-sheep-box">
@@ -230,7 +200,7 @@ export default function MySheepPage()
                                     <h3 className="my-sheep-box-title">내 담요 미리보기</h3>
                                     <div className="my-sheep-blanket">
                                         {/* 임시 조각함에 담긴 조각만 보여 준다 */}
-                                        <BlanketArt pieces={tempPieces} alt="내 담요 미리보기" />
+                                        <BlanketArt pieces={tempPieces} alt="내 담요 미리보기" getLink={pieceDetailLink} />
                                     </div>
                                 </div>
                             ) : promo}
