@@ -4,6 +4,12 @@ import { useEffect, useState } from 'react';
 const MUSIC_FADE_MS = 1500;
 const MUSIC_FADE_STEP_MS = 50;
 
+// iOS는 웹에서 볼륨을 바꿔도 실제 소리에 반영하지 않는다. 이때는 페이드 대신 바로 바꾸고, 끄기는 muted로 처리한다.
+// 볼륨 값을 저장은 해서 값으로는 알아낼 수 없으므로 기기 정보로 판별한다. (iPadOS는 맥처럼 보여 터치 수로 구분)
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const CAN_SET_VOLUME = !IS_IOS;
+
 // 화면이 바뀌어도 같은 곡이 끊기지 않도록 재생 중인 음악은 모듈에 하나만 둔다.
 // (온보딩 → 대기실처럼 이 훅을 쓰는 화면끼리 넘어가면 이어서 재생하고, 새로고침하면 모듈이 새로 만들어져 처음부터 재생한다.)
 let music = null;
@@ -27,6 +33,13 @@ catch
 function fadeTo (audio, target, onDone)
 {
     clearInterval(audio.fadeTimer);
+
+    if (!CAN_SET_VOLUME)
+    {
+        onDone?.();
+        return;
+    }
+
     const step = (Math.abs(target - audio.volume) * MUSIC_FADE_STEP_MS) / MUSIC_FADE_MS;
 
     audio.fadeTimer = setInterval(() =>
@@ -61,7 +74,11 @@ function toggleMusicMuted ()
 
     mutedListeners.forEach((listener) => listener(muted));
 
-    if (music)
+    if (music && !CAN_SET_VOLUME)
+    {
+        music.muted = muted;
+    }
+    else if (music)
     {
         fadeTo(music, muted ? 0 : musicVolume);
     }
@@ -106,6 +123,11 @@ export function useBackgroundMusic (src, volume)
             music.loop = true;
             music.volume = 0;
             musicSrc = src;
+
+            if (!CAN_SET_VOLUME)
+            {
+                music.muted = muted;
+            }
         }
 
         const audio = music;
@@ -116,20 +138,43 @@ export function useBackgroundMusic (src, volume)
         // 재생 약속이 이미 정리(unmount)된 뒤에 풀리면 소리가 새어 나가므로 막는다. (개발 모드 StrictMode의 이중 실행 대비)
         let disposed = false;
         // 이미 재생 중이면 play()가 바로 풀리므로 볼륨만 이 화면 값으로 부드럽게 맞춘다.
-        const startMusic = () => audio.play().then(() =>
+        const startMusic = () =>
         {
-            if (disposed)
+            // 이미 떠난 화면이거나 다른 곡으로 바뀌었으면 재생하지 않는다.
+            if (disposed || audio !== music)
             {
-                return;
+                return Promise.resolve();
             }
 
-            stopListening();
-            fadeTo(audio, muted ? 0 : volume);
-        });
+            return audio.play().then(() =>
+            {
+                // 재생을 기다리는 사이 다른 곡으로 바뀌었으면 바로 멈춘다.
+                if (audio !== music)
+                {
+                    audio.pause();
+                    return;
+                }
+
+                // 같은 곡을 다음 화면이 이어 쓸 수 있으므로 disposed만으로는 멈추지 않는다.
+                if (disposed)
+                {
+                    return;
+                }
+
+                stopListening();
+                fadeTo(audio, muted ? 0 : volume);
+            });
+        };
         const playOnInteract = () => startMusic().catch(() => {});
 
         startMusic().catch(() =>
         {
+            // 이미 떠난 화면은 리스너를 등록하지 않는다.
+            if (disposed || audio !== music || !audio.paused)
+            {
+                return;
+            }
+
             events.forEach((name) => window.addEventListener(name, playOnInteract));
         });
 

@@ -2,9 +2,9 @@
   <img src="public/assets/Readme.png" alt="잠시 정차합니다" width="100%" />
 </p>
 
-<h3 align="center">기다리는 시간을 담요 조각으로 남기는, 함께 기다리는 대기실</h3>
+<h3 align="center">혼자 견디던 기다림을, 함께 머무는 경험으로 바꾸는 온라인 공간</h3>
 
-<p align="center">14기 멋사대학 간지톤 : 아리톤 &nbsp;·&nbsp; 6팀 출품작</p>
+<p align="center">멋사대학 2026 간지톤 : 아리톤 &nbsp;·&nbsp; 6팀 출품작</p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white" alt="React" />
@@ -101,6 +101,7 @@ Vercel로 배포하며, [jamsi-stop.vercel.app](https://jamsi-stop.vercel.app/)�
 
 ## 팀
 
+TEAM 6시 내고양
 | 역할 | 이름 |
 |---|---|
 | Leader | 김민영 |
