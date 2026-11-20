@@ -53,9 +53,11 @@ export default function WaitingRoomPage ()
         releasedCount: null
     });
     const [statsLoading, setStatsLoading] = useState(Boolean(trip?.roomCode));
-    const [broadcastPhase, setBroadcastPhase] = useState('idle');
-    const [broadcastMessage, setBroadcastMessage] = useState('');
-    // 다음 방송을 쓸 수 있게 되는 시각(ms). 버튼의 남은 초 표시와 새로고침 복원에 쓴다.
+    // 방송 작성 모달이 열려 있는지
+    const [isComposing, setIsComposing] = useState(false);
+    // 지금 전광판에 나오는 방송 문구. 빈 문자열이면 기본 안내 문구를 보여 준다. (누가 보낸 방송이든 표시만 한다)
+    const [onAirMessage, setOnAirMessage] = useState('');
+    // 내가 다음 방송을 쓸 수 있게 되는 시각(ms). null이면 바로 쓸 수 있다. 버튼의 남은 초 표시와 새로고침 복원에 쓴다.
     const [cooldownEndsAt, setCooldownEndsAt] = useState(null);
     const [now, setNow] = useState(() => Date.now());
     const cooldownStorageKey = `waitingRoomBroadcastEndsAt:${trip?.roomCode ?? ''}`;
@@ -255,12 +257,17 @@ export default function WaitingRoomPage ()
         }
     }, []);
 
-    const playIncomingBroadcast = useCallback((message, broadcasterTicketNumber) =>
+    // 전광판에 방송을 displayMs 동안 띄운다. 다른 승객의 방송이어도 내 방송 버튼은 막지 않는다. (서버가 대기열 순서대로 보내 준다)
+    const playIncomingBroadcast = useCallback((message, broadcasterTicketNumber, displayMs) =>
     {
-        clearBroadcastTimers();
+        if (broadcastTimerRef.current)
+        {
+            clearTimeout(broadcastTimerRef.current);
+            broadcastTimerRef.current = null;
+        }
+
         closeReaction();
-        setBroadcastMessage(message);
-        setBroadcastPhase('broadcasting');
+        setOnAirMessage(message);
         showReactionForBroadcast(broadcasterTicketNumber);
 
         // 전광판에 방송이 뜰 때 안내 효과음을 낸다. 자동재생 차단 등으로 실패해도 무시한다.
@@ -269,28 +276,46 @@ export default function WaitingRoomPage ()
         announce.volume = 0.5;
         announce.play().catch(() => {});
 
-        // 새로고침해도 대기 시간이 이어지도록 방송이 완전히 끝나는 시각을 저장해 둔다.
-        try
-        {
-            localStorage.setItem(cooldownStorageKey, String(Date.now() + BROADCAST_DURATION_MS + BROADCAST_COOLDOWN_MS));
-        }
-        catch { /* 저장소를 못 써도 방송은 그대로 동작한다 */ }
-
         broadcastTimerRef.current = setTimeout(() =>
         {
+            broadcastTimerRef.current = null;
             closeReaction();
-            setCooldownEndsAt(Date.now() + BROADCAST_COOLDOWN_MS);
-            setBroadcastPhase('cooldown');
+            setOnAirMessage('');
+        }, displayMs ?? BROADCAST_DURATION_MS);
+    }, [closeReaction, showReactionForBroadcast]);
 
-            cooldownTimerRef.current = setTimeout(() =>
-            {
-                setBroadcastPhase('idle');
-                setBroadcastMessage('');
-            }, BROADCAST_COOLDOWN_MS);
-        }, BROADCAST_DURATION_MS);
-    }, [clearBroadcastTimers, closeReaction, cooldownStorageKey, showReactionForBroadcast]);
+    // 내 방송 버튼을 endsAt까지 막는다.
+    const applyCooldownUntil = useCallback((endsAt) =>
+    {
+        if (cooldownTimerRef.current)
+        {
+            clearTimeout(cooldownTimerRef.current);
+        }
 
-    // 새로고침 직후 아직 방송 대기 시간이 남았다면 그 시간만큼 다시 막는다. (방송 문구는 복원하지 않는다)
+        setCooldownEndsAt(endsAt);
+        setNow(Date.now());
+        cooldownTimerRef.current = setTimeout(() =>
+        {
+            cooldownTimerRef.current = null;
+            setCooldownEndsAt(null);
+        }, Math.max(endsAt - Date.now(), 0));
+    }, []);
+
+    // 서버가 알려 준 내 쿨타임(ms)만큼 막고, 새로고침해도 이어지도록 끝나는 시각을 저장해 둔다.
+    const startCooldown = useCallback((ms) =>
+    {
+        const endsAt = Date.now() + ms;
+
+        applyCooldownUntil(endsAt);
+
+        try
+        {
+            localStorage.setItem(cooldownStorageKey, String(endsAt));
+        }
+        catch { /* 저장소를 못 써도 방송은 그대로 동작한다 */ }
+    }, [applyCooldownUntil, cooldownStorageKey]);
+
+    // 새로고침 직후 아직 내 방송 대기 시간이 남았다면 그 시간만큼 다시 막는다.
     useEffect(() =>
     {
         let endsAt = 0;
@@ -301,17 +326,13 @@ export default function WaitingRoomPage ()
         }
         catch { /* 저장소를 못 읽으면 처음부터 쓸 수 있게 둔다 */ }
 
-        const remaining = endsAt - Date.now();
-
-        if (remaining <= 0)
+        if (endsAt - Date.now() <= 0)
         {
             return;
         }
 
-        setCooldownEndsAt(endsAt);
-        setBroadcastPhase('cooldown');
-        cooldownTimerRef.current = setTimeout(() => setBroadcastPhase('idle'), remaining);
-    }, [cooldownStorageKey]);
+        applyCooldownUntil(endsAt);
+    }, [applyCooldownUntil, cooldownStorageKey]);
 
     useEffect(() =>
     {
@@ -378,14 +399,14 @@ export default function WaitingRoomPage ()
 
     useEffect(() =>
     {
-        const handleRemoteBroadcast = ({ message, broadcasterTicketNumber }) =>
+        const handleRemoteBroadcast = ({ message, broadcasterTicketNumber, displayMs }) =>
         {
             if (!message)
             {
                 return;
             }
 
-            playIncomingBroadcast(message, broadcasterTicketNumber);
+            playIncomingBroadcast(message, broadcasterTicketNumber, displayMs);
         };
 
         EventBus.on(WAITING_ROOM_BROADCAST_RECEIVED, handleRemoteBroadcast);
@@ -412,8 +433,15 @@ export default function WaitingRoomPage ()
                 broadcastIdRef.current = message.broadcastId;
                 EventBus.emit(WAITING_ROOM_BROADCAST_RECEIVED, {
                     message: message.sentence,
-                    broadcasterTicketNumber: message.ticketNumber
+                    broadcasterTicketNumber: message.ticketNumber,
+                    displayMs: message.displayMs
                 });
+            }
+
+            // 내 방송이 대기열에 들어가면 서버가 알려 준 시간만큼 내 버튼만 막는다.
+            if (message.type === 'BROADCAST_ACCEPTED')
+            {
+                startCooldown(message.cooldownMs ?? BROADCAST_COOLDOWN_MS);
             }
 
             if (message.type === 'PASSENGER_CARD')
@@ -428,6 +456,11 @@ export default function WaitingRoomPage ()
                     ticketId: message.ticketNumber,
                     reactionType: SERVER_TO_REACTION[message.reaction]
                 });
+            }
+            else if (message.type === 'ERROR' && message.code === 'BROADCAST_COOLDOWN')
+            {
+                // 버튼에 남은 초가 보이므로 에러 문구는 띄우지 않는다.
+                startCooldown(message.retryAfterMs ?? BROADCAST_COOLDOWN_MS);
             }
             else if (message.type === 'ERROR')
             {
@@ -463,7 +496,7 @@ export default function WaitingRoomPage ()
             socket.disconnect();
             socketRef.current = null;
         };
-    }, [trip?.roomCode, trip?.ticketId, trip?.ticketNumber]);
+    }, [trip?.roomCode, trip?.ticketId, trip?.ticketNumber, startCooldown]);
 
     // 접속자 목록을 Phaser 씬에 전달한다. 씬이 늦게 준비돼도 받을 수 있게 준비 이벤트에도 다시 보낸다.
     useEffect(() =>
@@ -492,19 +525,21 @@ export default function WaitingRoomPage ()
 
     const handleEndWaiting = () => navigate('/finish-waiting');
 
+    const isCoolingDown = cooldownEndsAt != null;
+
     const handleOpenBroadcast = () =>
     {
-        if (broadcastPhase !== 'idle')
+        if (isCoolingDown)
         {
             return;
         }
 
-        setBroadcastPhase('composing');
+        setIsComposing(true);
     };
 
     const handleCloseBroadcastModal = () =>
     {
-        setBroadcastPhase('idle');
+        setIsComposing(false);
     };
 
     // 방송은 서버로 보내고, 전광판에는 서버가 순서대로 보내 주는 BROADCAST가 올 때 뜬다.
@@ -512,20 +547,15 @@ export default function WaitingRoomPage ()
     {
         setRoomError(null);
         socketRef.current?.sendBroadcast({ situationChipCode, moodChip });
-        setBroadcastPhase('idle');
+        setIsComposing(false);
     };
 
-    const broadcastDisabled = broadcastPhase !== 'idle';
-
-    // 방송 중이거나 대기 시간(쿨타임)일 때 버튼에 남은 초를 보여 주기 위해 1초마다 줄인다.
-    const isBroadcastBlocked = broadcastPhase === 'broadcasting' || broadcastPhase === 'cooldown';
-    const cooldownLeft = broadcastPhase === 'cooldown' && cooldownEndsAt
-        ? Math.min(Math.max(Math.ceil((cooldownEndsAt - now) / 1000), 1), BROADCAST_COOLDOWN_MS / 1000)
-        : BROADCAST_COOLDOWN_MS / 1000;
+    // 내 쿨타임 동안 버튼에 남은 초를 보여 주기 위해 1초마다 줄인다.
+    const cooldownLeft = isCoolingDown ? Math.max(Math.ceil((cooldownEndsAt - now) / 1000), 1) : null;
 
     useEffect(() =>
     {
-        if (broadcastPhase !== 'cooldown')
+        if (!isCoolingDown)
         {
             return undefined;
         }
@@ -533,7 +563,7 @@ export default function WaitingRoomPage ()
         const intervalId = setInterval(() => setNow(Date.now()), 1000);
 
         return () => clearInterval(intervalId);
-    }, [broadcastPhase]);
+    }, [isCoolingDown]);
 
     return (
         <main className={isHeaderHidden ? 'waiting-room waiting-room-header-hidden' : 'waiting-room'}>
@@ -563,8 +593,8 @@ export default function WaitingRoomPage ()
                     <WaitingRoomMarquee
                         arrivalCount={statsLoading ? null : marqueeStats.arrivalCount}
                         releasedCount={statsLoading ? null : marqueeStats.releasedCount}
-                        phase={broadcastPhase === 'composing' ? 'idle' : broadcastPhase}
-                        broadcastMessage={broadcastMessage}
+                        phase={onAirMessage ? 'broadcasting' : 'idle'}
+                        broadcastMessage={onAirMessage}
                     />
                 </div>
                 <WaitingRoomReactionBubble
@@ -576,7 +606,7 @@ export default function WaitingRoomPage ()
                 />
                 {roomError && <p className="waiting-room-error" role="alert">{roomError}</p>}
                 <WaitingRoomBroadcastModal
-                    isOpen={broadcastPhase === 'composing'}
+                    isOpen={isComposing}
                     roomCode={trip?.roomCode}
                     trip={trip}
                     onClose={handleCloseBroadcastModal}
@@ -586,8 +616,8 @@ export default function WaitingRoomPage ()
                     passedTrains={passedTrains}
                     onEndWaiting={handleEndWaiting}
                     onOpenBroadcast={handleOpenBroadcast}
-                    broadcastDisabled={broadcastDisabled}
-                    broadcastCooldownLeft={isBroadcastBlocked ? cooldownLeft : null}
+                    broadcastDisabled={isCoolingDown}
+                    broadcastCooldownLeft={cooldownLeft}
                 />
             </div>
         </main>
