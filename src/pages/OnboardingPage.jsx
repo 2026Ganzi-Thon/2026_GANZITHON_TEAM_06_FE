@@ -22,6 +22,8 @@ const STEP_STATUS = 'status';
 const STEP_TICKET = 'ticket';
 // 승차권이 발급되는 연출을 보여 준 뒤 대기실로 넘어가기까지의 시간(ms)
 const ISSUE_ANIMATION_MS = 2200;
+// 대화창이 내려가며 사라지는 시간(ms). finish-waiting.css의 chat-panel-fall 길이와 같게 둔다.
+const CHAT_CLOSE_MS = 350;
 // 방 선택 화면에 있는 동안 방별 인원을 다시 불러오는 간격(ms). 서버가 밀어 주지 않아 직접 다시 조회한다.
 const OCCUPANCY_POLL_MS = 5000;
 
@@ -57,6 +59,8 @@ export default function OnboardingPage ()
     const [issuedTicketNumber, setIssuedTicketNumber] = useState(null);
     // 발급이 끝나 연출을 보여 주는 중인지
     const [isIssued, setIsIssued] = useState(false);
+    // 대화창이 내려가며 사라지는 연출이 끝났는지
+    const [isChatGone, setIsChatGone] = useState(false);
 
     useEffect(() =>
     {
@@ -69,6 +73,19 @@ export default function OnboardingPage ()
 
         return () => clearTimeout(timer);
     }, [isIssued, navigate]);
+
+    // 승차권 단계로 넘어가 대화창이 내려가는 연출이 끝나면 대화창을 화면에서 지운다.
+    useEffect(() =>
+    {
+        if (step !== STEP_TICKET)
+        {
+            return undefined;
+        }
+
+        const timer = setTimeout(() => setIsChatGone(true), CHAT_CLOSE_MS);
+
+        return () => clearTimeout(timer);
+    }, [step]);
 
     useBackgroundMusic('/assets/sounds/onboarding.mp3', 0.3);
 
@@ -341,7 +358,7 @@ export default function OnboardingPage ()
             )}
 
             {/* 몽실 역장 대화창은 인사~상태 선택 단계 내내 한 번만 올라오고, 승차권 단계로 넘어갈 때 내려간다 (단계마다 다시 나타나지 않는다) */}
-            {step !== STEP_START && (
+            {step !== STEP_START && !isChatGone && (
                 <div className="onboarding-chat">
                     <ChatPanel
                         portrait={chatContent.portrait}
