@@ -780,10 +780,19 @@
 
 /* 세로 폰: 패널을 세로로 늘리고 사각형을 한 줄씩 쌓는다 */
 @media (max-width: 600px) {
+    /* 배경(페이지)은 스크롤하지 않고, 패널이 헤더 아래 남은 높이를 채운다 (내용은 패널 안에서 스크롤) */
+    .my-sheep-page {
+        display: flex;
+        flex-direction: column;
+        height: 100dvh;
+        overflow: hidden;
+    }
+
     .my-sheep-panel {
         --my-sheep-inset-x: 8%;
         width: 96vw;
-        height: 84dvh;
+        flex: 1;
+        min-height: 0;
         margin: 40px auto 16px;
     }
 

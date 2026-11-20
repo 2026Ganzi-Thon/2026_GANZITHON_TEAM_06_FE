@@ -323,6 +323,32 @@
     }
 }
 
+/* 모바일 세로: 온보딩 대화창(style.css)과 같이 패널 폭에 맞춰 다음 버튼·글자를 줄인다 */
+@media (max-width: 640px) and (orientation: portrait) {
+    .finish-waiting-page .finish-waiting-panel {
+        container-type: inline-size;
+    }
+
+    .finish-waiting-page .finish-waiting-next img {
+        width: 16cqw;
+        height: 5.4cqw;
+    }
+
+    .finish-waiting-page .finish-waiting-next {
+        right: 5%;
+    }
+
+    .finish-waiting-page .finish-waiting-message {
+        font-size: 3cqw;
+    }
+
+    /* '아직 더 기다릴래요'는 마지막 선택 버튼 아래, 목록 오른쪽 끝에 둔다 */
+    .finish-waiting-back {
+        order: 1;
+        margin-right: 0;
+    }
+}
+
 /* 모바일 가로: 대화창이 화면을 가리지 않게 폭(높이 기준)과 글자·버튼을 줄인다 */
 @media (orientation: landscape) and (max-height: 500px) {
     .finish-waiting-page {
