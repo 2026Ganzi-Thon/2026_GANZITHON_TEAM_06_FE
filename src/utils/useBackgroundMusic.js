@@ -4,6 +4,16 @@ import { useEffect, useState } from 'react';
 const MUSIC_FADE_MS = 1500;
 const MUSIC_FADE_STEP_MS = 50;
 
+// iOS는 웹에서 볼륨을 바꿀 수 없다(항상 1). 이때는 페이드 대신 바로 바꾸고, 끄기는 muted로 처리한다.
+const CAN_SET_VOLUME = (() =>
+{
+    const probe = new Audio();
+
+    probe.volume = 0.5;
+
+    return probe.volume === 0.5;
+})();
+
 // 화면이 바뀌어도 같은 곡이 끊기지 않도록 재생 중인 음악은 모듈에 하나만 둔다.
 // (온보딩 → 대기실처럼 이 훅을 쓰는 화면끼리 넘어가면 이어서 재생하고, 새로고침하면 모듈이 새로 만들어져 처음부터 재생한다.)
 let music = null;
@@ -27,6 +37,13 @@ catch
 function fadeTo (audio, target, onDone)
 {
     clearInterval(audio.fadeTimer);
+
+    if (!CAN_SET_VOLUME)
+    {
+        onDone?.();
+        return;
+    }
+
     const step = (Math.abs(target - audio.volume) * MUSIC_FADE_STEP_MS) / MUSIC_FADE_MS;
 
     audio.fadeTimer = setInterval(() =>
@@ -61,7 +78,11 @@ function toggleMusicMuted ()
 
     mutedListeners.forEach((listener) => listener(muted));
 
-    if (music)
+    if (music && !CAN_SET_VOLUME)
+    {
+        music.muted = muted;
+    }
+    else if (music)
     {
         fadeTo(music, muted ? 0 : musicVolume);
     }
@@ -106,6 +127,11 @@ export function useBackgroundMusic (src, volume)
             music.loop = true;
             music.volume = 0;
             musicSrc = src;
+
+            if (!CAN_SET_VOLUME)
+            {
+                music.muted = muted;
+            }
         }
 
         const audio = music;
